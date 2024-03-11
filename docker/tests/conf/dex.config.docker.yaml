@@ -17,7 +17,7 @@ grpc:
   # tlsCert: /etc/dex/certs/server.crt
   # tlsKey: /etc/dex/certs/server.key
   # tlsClientCA: /etc/dex/certs/ca.crt
-  reflection: true
+  # reflection: true
 
 connectors:
 - type: mockCallback

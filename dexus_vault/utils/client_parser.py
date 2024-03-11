@@ -28,6 +28,7 @@ def _fill_missing_keys(config: dict) -> dict:
     for key in _config_keys:
         if key in ["redirect_uris", "trusted_peers"]:
             config[key] = parse_list(config.get(key, None))
+        config["public"] = config.get("public", False)
     return config
 
 
