@@ -20,7 +20,7 @@ class VaultClient:
         Function validates if we sucessfuly authentificated to Vault
         """
         if client.is_authenticated():
-            logger.info(
+            logger.debug(
                 f"Authentificated to Vault {self.config['VAULT_ADDR']} via {auth_method} auth method"
             )
         else:
