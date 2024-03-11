@@ -1,0 +1,13 @@
+version: "3.8"
+services:
+
+  dexidp:
+
+    image: dexidp/dex:v2.38.0
+
+    volumes:
+      # - ./certs/:/etc/dex/certs/
+      - ./config.docker.yaml:/etc/dex/config.docker.yaml
+    ports:
+      - "5556:5556"
+      - "5557:5557"
