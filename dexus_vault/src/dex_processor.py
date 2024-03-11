@@ -38,7 +38,7 @@ class DexClient:
                 target=self.config["DEX_GRPC_URL"], credentials=self.creds
             )
         else:
-            logger.warning(f"Dex client started in insecure channel")
+            logger.debug(f"Dex client started in insecure channel")
             return grpc.insecure_channel(target=self.config["DEX_GRPC_URL"])
 
     def dex_grpc_close_connection(self):
@@ -123,4 +123,4 @@ class DexClient:
         Everytime DexClient object delets, this will close GRPC connection
         """
         self.dex_grpc_close_connection()
-        logger.info(f"Dex connection closed")
+        logger.debug(f"Dex connection closed")
