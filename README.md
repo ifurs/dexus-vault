@@ -50,8 +50,7 @@ if you not specified in dex certificates, simply skip them, and client will star
 | VAULT_CERT_KEY | false | - | Vault client certificate key path |
 | VAULT_CERT_CA | false | - | Vault certficate authority path or bool, `false` - do not validate, `true` - validate with internal trustore |
 | VAULT_LDAP_USERNAME | false | - | LDAP username used to auth to Vault |
-| VAULT_LDAP_USERNAME | false | - | LDAP password used to auth to Vault |
-| VAULT_LDAP_USERNAME | false | - | LDAP username used to auth to Vault |
+| VAULT_LDAP_PASSWORD | false | - | LDAP password used to auth to Vault |
 | VAULT_APPROLE | false | - | bool value, used to identify to use APPROLE auth |
 | VAULT_APPROLE_ROLE_ID | false | - | Vault approle role id |
 | VAULT_APPROLE_SECRET_ID | false | - | Vault approle secret id |
@@ -83,9 +82,6 @@ Also you may ask, how to define lists for `redirect_uris` and `trusted_peers`, y
 
 ## Run local testing
 In dir `docker/tests` you can find `docker-compose.yaml` that runs Vault and Dex localy, and `start.sh` that runs same but with predifined configuration, sample clients and create token with policy to work with dexus_vault, do not use that script in production, only for local testing
-
-## Not good, but works, at least for now
-Cause we need to track current state of created clients, and Dex do not support `list` method, we implemented load current state to cache pkl
 
 ## About Dex GRPC
 all GRPC Api methods dexus_vault use, defined in https://github.com/dexidp/dex/blob/v2.38.0/api/v2/api.proto
