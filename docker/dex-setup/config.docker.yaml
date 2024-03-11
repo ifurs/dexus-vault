@@ -1,0 +1,28 @@
+issuer: http://127.0.0.1:5556/dex
+
+storage:
+  type: sqlite3
+  config:
+    file: /etc/dex/dex.db
+
+web:
+  http: 0.0.0.0:5556
+
+logger:
+  level: "debug"
+  format: "text"
+
+grpc:
+  addr: 0.0.0.0:5557
+  # tlsCert: /etc/dex/certs/server.crt
+  # tlsKey: /etc/dex/certs/server.key
+  # tlsClientCA: /etc/dex/certs/ca.crt
+  reflection: true
+
+connectors:
+- type: mockCallback
+  id: mock
+  name: Example
+
+# Let dex keep a list of passwords which can be used to login to dex.
+enablePasswordDB: true
