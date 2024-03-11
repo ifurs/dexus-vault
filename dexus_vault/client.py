@@ -22,7 +22,8 @@ def sync_dex_clients(
                 dex_get_client.get("client", {})
             )  # TODO: move that logic to dex_processor
             if client.get("id") == client_from_dex.get("id"):
-
+                print(client)
+                print(client_from_dex)
                 if client == client_from_dex:
                     logger.debug(f"CLIENT {client_from_dex.get('id')} already exist.")
 
