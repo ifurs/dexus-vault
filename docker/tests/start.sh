@@ -43,11 +43,11 @@ vault_init() {
     response=$(exec_vault vault operator init)
     sleep 3
     parse_vault_response "$response"
-    vault_unseal $unseal_key_1 
-    vault_unseal $unseal_key_2 
-    vault_unseal $unseal_key_3 
-    vault_unseal $unseal_key_4 
-    vault_unseal $unseal_key_5 
+    vault_unseal $unseal_key_1
+    vault_unseal $unseal_key_2
+    vault_unseal $unseal_key_3
+    vault_unseal $unseal_key_4
+    vault_unseal $unseal_key_5
     exec_vault vault status
 }
 
@@ -65,7 +65,7 @@ vault_create_secrets() {
 
 vault_create_test() {
     vault_enable_kv
-    vault_create_secrets 
+    vault_create_secrets
     exec_vault vault policy write policy1 templ/policy1.hcl > /dev/null
     echo "\033[0;32m______ Use this token to access client secrets in Vault _______\033[0m"
     exec_vault vault token create -policy=policy1
@@ -77,7 +77,7 @@ init_all() {
     vault_create_test
 }
 
-init_all 
+init_all
 
 
 trap down_docker_compose SIGINT
