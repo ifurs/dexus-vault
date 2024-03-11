@@ -1,0 +1,25 @@
+version: "3.8"
+services:
+
+  dexidp:
+    image: dexidp/dex:v2.38.0
+    volumes:
+      # - ./certs/:/etc/dex/certs/
+      - ./conf/dex.config.docker.yaml:/etc/dex/config.docker.yaml
+    ports:
+      - "5556:5556"
+      - "5557:5557"
+
+  vault:
+    image: hashicorp/vault:1.12.7
+    container_name: vault
+    restart: always
+    environment:
+      VAULT_ADDR: http://127.0.0.1:8200
+    volumes:
+      - ./conf/:/vault/config.d
+    ports:
+      - "8200:8200"
+    cap_add:
+      - IPC_LOCK
+    command: server -config=/vault/config.d/vault.hcl
