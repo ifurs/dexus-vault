@@ -81,6 +81,12 @@ Also you may ask, how to define lists for `redirect_uris` and `trusted_peers`, y
 - native json list `["value1", "value2"]` but this will disale in Vault UI non-json view for that secret
 - using string with comma as delimeter `"value1,value2"` but it's not recommended and would be removed in future iterations
 
+## Run local testing
+In dir `docker/tests` you can find `docker-compose.yaml` that runs Vault and Dex localy, and `start.sh` that runs same but with predifined configuration, sample clients and create token with policy to work with dexus_vault, do not use that script in production, only for local testing
+
+## Not good, but works, at least for now
+Cause we need to track current state of created clients, and Dex do not support `list` method, we implemented load current state to cache pkl
+
 ## About Dex GRPC
 all GRPC Api methods dexus_vault use, defined in https://github.com/dexidp/dex/blob/v2.38.0/api/v2/api.proto
 and compiled with `grpc_tools.protoc`
