@@ -4,9 +4,9 @@ from dexus_vault.utils.types import check_var_type
 from typing import Any, Dict, Optional
 
 # for local only
-# from dotenv import load_dotenv
+from dotenv import load_dotenv
 
-# load_dotenv()
+load_dotenv()
 
 
 def _get_config_value(

@@ -1,0 +1,9 @@
+{
+    "id": "client1",
+    "logo_url": "https://picsum.photos/200/300",
+    "name": "client1",
+    "public": false,
+    "redirect_uris": "http://127.0.0.1:5000/callback",
+    "secret": "some_pass",
+    "trusted_peers": "client2"
+}
