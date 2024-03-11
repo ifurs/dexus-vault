@@ -17,19 +17,3 @@ def load_file(filepath: str) -> bytes:
                 f"File {filepath} path is incorrect or file does not exist!"
             )
     return None
-
-
-### Temporary solution to store var with current dex clients, would be deprecated
-def get_cached_variable(variable=set()):
-    try:
-        with open("cache.pkl", "rb") as f:
-            cached_variable = pickle.load(f)
-            return cached_variable
-    except:
-        cached_variable = variable
-        return cached_variable
-
-
-def cache_variable(variable):
-    with open("cache.pkl", "wb") as f:
-        pickle.dump(variable, f)
