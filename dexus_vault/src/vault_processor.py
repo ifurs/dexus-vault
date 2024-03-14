@@ -11,7 +11,7 @@ class VaultClient:
     This Class represents methods we used inside dexus_vault, nothing new, just wrap hvac
     """
 
-    def __init__(self, config):
+    def __init__(self, config: dict):
         self.config = config
         self.client = self.login_to_client()
 
@@ -100,8 +100,9 @@ class VaultClient:
         return response["data"]["data"]
 
     def vault_read_secrets(self) -> list:
-        """Combine list_secrets with read_secret"""
-
+        """
+        Combine list_secrets with read_secret
+        """
         _client_config = []
         for secret in self.vault_list_secrets():
             config = normalize_config(self.vault_read_secret(secret_path=secret))
