@@ -1,6 +1,6 @@
 import os
-from dexus_vault.utils.files import load_file
-from dexus_vault.utils.types import check_var_type
+from utils.files import load_file
+from utils.types import check_var_type
 from typing import Any, Dict, Optional
 
 
@@ -33,7 +33,7 @@ def get_vault_config() -> Dict[str, Any]:
     Get the configuration as a dictionary, with type-checked values.
     """
     config = {
-        "VAULT_ADDR": _get_config_value("VAULT_ADDR", str, "https://127.0.0.1:8200"),
+        "VAULT_ADDR": _get_config_value("VAULT_ADDR", str, "http://127.0.0.1:8200"),
         "VAULT_APPROLE": _get_config_value("VAULT_APPROLE", str),
         "VAULT_APPROLE_ROLE_ID": _get_config_value("VAULT_APPROLE_ROLE_ID", str),
         "VAULT_APPROLE_SECRET_ID": _get_config_value("VAULT_APPROLE_SECRET_ID", str),
@@ -45,6 +45,8 @@ def get_vault_config() -> Dict[str, Any]:
         "VAULT_LDAP_USERNAME": _get_config_value("VAULT_LDAP_USERNAME", str),
         "VAULT_LDAP_PASSWORD": _get_config_value("VAULT_LDAP_PASSWORD", str),
         "VAULT_REQUEST_TIMEOUT": _get_config_value("VAULT_REQUEST_TIMEOUT", int, 5),
+        "VAULT_MAX_RETRIES": _get_config_value("VAULT_MAX_RETRIES", int, 20),
+        "VAULT_RETRY_WAIT": _get_config_value("VAULT_RETRY_WAIT", int, 3),
         "VAULT_ALLOW_REDIRECT": _get_config_value("VAULT_ALLOW_REDIRECT", bool, False),
         "VAULT_NAMESPACE": _get_config_value("VAULT_NAMESPACE", str),
         "VAULT_PROXIES": _get_config_value("VAULT_PROXIES", dict),
