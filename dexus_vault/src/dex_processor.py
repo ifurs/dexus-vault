@@ -8,7 +8,7 @@ from google.protobuf.json_format import MessageToDict
 from dexus_vault.grpc_dexidp.dexidp.api_pb2_grpc import DexStub
 import dexus_vault.grpc_dexidp.dexidp.api_pb2 as pb2
 
-logger = logging.getLogger()
+from dexus_vault.utils.logger import logger
 
 
 class DexClient:
@@ -24,8 +24,10 @@ class DexClient:
         self.channel = self.dex_grpc_connect()
 
     # crete grpc connection to Dex
-    def dex_grpc_connect(self):
-        """Open connection to Dex GRPC"""
+    def dex_grpc_connect(self) -> object:
+        """
+        Open connection to Dex GRPC
+        """
 
         if self.config["CLIENT_CRT"]:
             self.creds = grpc.ssl_channel_credentials(
@@ -33,7 +35,6 @@ class DexClient:
                 private_key=self.config["CLIENT_KEY"],
                 certificate_chain=self.config["CLIENT_CRT"],
             )
-
             return grpc.secure_channel(
                 target=self.config["DEX_GRPC_URL"], credentials=self.creds
             )
@@ -42,15 +43,24 @@ class DexClient:
             return grpc.insecure_channel(target=self.config["DEX_GRPC_URL"])
 
     def dex_grpc_close_connection(self):
-        """Close connection to Dex GRPC"""
-        self.channel.close()
-
-    def get_dex_client(self, client_id: str):
         """
-        Call Get Dex Client with params
-        :param client_id:
-        :param self:
-        :return: response code from Dex with Client Message
+        Close connection to Dex GRPC
+        """
+        if self.channel:
+            self.channel.close()
+
+    def get_dex_version(self) -> dict:
+        """
+        Get Dex version
+        """
+        dex_request = pb2.VersionReq()
+        response = DexStub(self.channel).GetVersion(dex_request)
+
+        return MessageToDict(response)
+    
+    def get_dex_client(self, client_id: str) -> dict | None:
+        """
+        Call Get Dex Client with by client id
         """
         dex_request = pb2.GetClientReq()
         dex_request.id = client_id
@@ -61,7 +71,7 @@ class DexClient:
 
         except grpc.RpcError as rpc_error:
             if rpc_error.code() == grpc.StatusCode.UNKNOWN:
-                logger.warning(
+                logger.debug(
                     f"RESPONSE FROM GRPC: {rpc_error.details()}, client {client_id}"
                 )
             else:
@@ -69,21 +79,10 @@ class DexClient:
                     f"GRPC CALL CODE: {rpc_error.code()} with details {rpc_error.details()}"
                 )
 
-    def get_dex_version(self):
-        """
-        Get Dex version
-        :return: client definition in dict format
-        """
-        dex_request = pb2.VersionReq()
-        response = DexStub(self.channel).GetVersion(dex_request)
 
-        return MessageToDict(response)
-
-    def create_dex_client(self, client: dict) -> dict:
+    def create_dex_client(self, client: dict) -> dict | None:
         """
         Create OIDC client in Dex
-        :param client: dict with all params for creating client
-        :return: dict: in case of creation you will get params back, else you get error or
         """
         request = pb2.CreateClientReq()
         request.client.id = client.get("id")
@@ -100,11 +99,9 @@ class DexClient:
             logger.info(f"Created new Dex client '{client_id}'")
             return client_id
 
-    def delete_dex_client(self, client_id: str):
+    def delete_dex_client(self, client_id: str) -> None:
         """
         Delete OIDC client in Dex
-        :param client_id: str
-        :return:
         """
         dex_request = pb2.DeleteClientReq()
         dex_request.id = client_id
