@@ -28,12 +28,12 @@ setup(
         "Programming Language :: Python :: Implementation :: CPython",
         "Operating System :: OS Independent",
     ),
-    install_requires = [
+    install_requires=[
         "grpcio~=1.62.0",
         "grpcio-tools~=1.60.1",
         "googleapis-common-protos>=1.62.0",
         "protobuf~=4.25.3",
-       " hvac~=2.1.0"
+        " hvac~=2.1.0",
     ],
-    python_requires='>=3.8',
+    python_requires=">=3.8",
 )

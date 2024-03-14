@@ -57,7 +57,7 @@ class DexClient:
         response = DexStub(self.channel).GetVersion(dex_request)
 
         return MessageToDict(response)
-    
+
     def get_dex_client(self, client_id: str) -> dict | None:
         """
         Call Get Dex Client with by client id
@@ -78,7 +78,6 @@ class DexClient:
                 logger.warning(
                     f"GRPC CALL CODE: {rpc_error.code()} with details {rpc_error.details()}"
                 )
-
 
     def create_dex_client(self, client: dict) -> dict | None:
         """

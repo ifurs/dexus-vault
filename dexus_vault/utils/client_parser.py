@@ -17,7 +17,7 @@ def parse_list(list_from_vault: str | list) -> list:
     if isinstance(list_from_vault, list):
         return list_from_vault
 
-    if isinstance(list_from_vault,  str):
+    if isinstance(list_from_vault, str):
         return list_from_vault.split(",")
 
     else:
@@ -36,7 +36,10 @@ def _camel_case_to_undercore(config: dict) -> dict:
     """
     Tranform camel case response from Dex GRPC
     """
-    return {"".join(['_' + i.lower() if i.isupper() else i for i in key]).lstrip('_'): value for key, value in config.items()}
+    return {
+        "".join(["_" + i.lower() if i.isupper() else i for i in key]).lstrip("_"): value
+        for key, value in config.items()
+    }
 
 
 def normalize_config(client_config: dict) -> dict | None:

@@ -1,6 +1,7 @@
 from typing import Any, TypeVar, Type
 
-T = TypeVar('T')
+T = TypeVar("T")
+
 
 def check_var_type(value: Any, target_type: Type[T]) -> T:
     """
