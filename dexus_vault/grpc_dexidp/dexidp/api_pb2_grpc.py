@@ -2,7 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-import dexus_vault.grpc_dexidp.dexidp.api_pb2 as dexidp_dot_api__pb2
+import grpc_dexidp.dexidp.api_pb2 as dexidp_dot_api__pb2
 
 
 class DexStub(object):
