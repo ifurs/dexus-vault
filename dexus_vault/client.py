@@ -46,7 +46,7 @@ def run():
     """
     dex_client = DexClient(config=get_dex_config())
     logger.info(f"Dex server version {dex_client.get_dex_version()}")
-    
+
     while True:
         dex_client = DexClient(config=get_dex_config())
         vault_client = VaultClient(config=get_vault_config())
