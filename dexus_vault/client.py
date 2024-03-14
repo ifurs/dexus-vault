@@ -1,3 +1,4 @@
+import os
 import time
 
 from dexus_vault.src.dex_processor import DexClient
@@ -8,8 +9,13 @@ from dexus_vault.utils.config import get_vault_config, get_dex_config
 from dexus_vault.utils.client_parser import normalize_config
 
 
-def sync_dex_clients(dex_client: object, vault_clients: list) -> set:
+SYNC_INTERVAL = os.getenv("SYNC_INTERVAL", 60)
 
+
+def sync_dex_clients(dex_client: object, vault_clients: list) -> set:
+    """
+    Synchronize Dex clients with Vault clients.
+    """
     logger.debug(f"Target clients {[x.get('id') for x in vault_clients]}")
     for client in vault_clients:
         dex_get_client = dex_client.get_dex_client(client_id=client.get("id"))
@@ -35,13 +41,17 @@ def sync_dex_clients(dex_client: object, vault_clients: list) -> set:
 
 
 def run():
+    """
+    Main function to run the Dex client and Vault client synchronization.
+    """
     dex_client = DexClient(config=get_dex_config())
     logger.info(f"Dex server version {dex_client.get_dex_version()}")
+
     while True:
         dex_client = DexClient(config=get_dex_config())
         vault_client = VaultClient(config=get_vault_config())
         client_configs = vault_client.vault_read_secrets()
 
         sync_dex_clients(dex_client, client_configs)
-
-        time.sleep(15)
+        logger.info(f"Sync completed, next sync after {SYNC_INTERVAL} seconds")
+        time.sleep(SYNC_INTERVAL)
