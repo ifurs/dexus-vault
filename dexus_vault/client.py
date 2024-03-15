@@ -1,12 +1,12 @@
 import os
 import time
 
-from src.dex_processor import DexClient
-from src.vault_processor import VaultClient
+from dexus_vault.src.dex_processor import DexClient
+from dexus_vault.src.vault_processor import VaultClient
 
-from utils.logger import logger
-from utils.config import get_vault_config, get_dex_config
-from utils.client_parser import normalize_config
+from dexus_vault.utils.logger import logger
+from dexus_vault.utils.config import get_vault_config, get_dex_config
+from dexus_vault.utils.client_parser import normalize_config
 
 
 SYNC_INTERVAL = os.getenv("SYNC_INTERVAL", 60)
