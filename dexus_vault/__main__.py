@@ -1,7 +1,7 @@
 import threading
 
-from client import run
-from utils.logger import logger
+from dexus_vault.client import run
+from dexus_vault.utils.logger import logger
 
 # Try to import dotenv, if it's installed
 try:
