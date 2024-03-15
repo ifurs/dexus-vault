@@ -1,5 +1,4 @@
 import grpc
-import logging
 
 # Import function that transform GRPC Message into Python dict
 from google.protobuf.json_format import MessageToDict
