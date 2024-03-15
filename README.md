@@ -9,7 +9,7 @@ Synchronizer of Dex clients with secrets in Vault
 Dexus Vault is utility designed to synchronize Dex client configurations with secrets stored in Hashicorp Vault.
 This tool simplifies the management of Dex clients by automating the process of keeping them in sync with Vault secrets.
 
-## How it  works
+## How it works
 when you run dexus_vault, it will connects to provided Vault via `hvac` library and collets secrets by provided path, then dexus_vault conncets to Dex Idp over GRPC and create/update clients.
 
 Currently Dex don't have native "Update" method, so dexus_vault will recreate client(keep in mind)
@@ -18,6 +18,10 @@ Currently Dex don't have native "Update" method, so dexus_vault will recreate cl
 The recommended installation method is using pip:
 ```sh
 pip install dexus-vault
+```
+and run it:
+```sh
+python -m dexus_vault
 ```
 
 ## Run dexus_vault
@@ -84,6 +88,7 @@ This example shows all available params for client(same as proto message)
 }
 ```
 In Vault config `id` and `secret` are required, and `public` has default value `False` that enforced on dexus_vault level.
+For `public` default value is "False" but if you want to enable, plz, check if that var has bool type(Vault implementation), not a string.
 Also you may ask, how to define lists for `redirect_uris` and `trusted_peers`, you can do it in 2 ways:
 - native json list `["value1", "value2"]` but this will disale in Vault UI non-json view for that secret
 - using string with comma as delimeter `"value1,value2"` but it's not recommended and would be removed in future iterations
