@@ -1,6 +1,6 @@
 import os
-from utils.files import load_file
-from utils.types import check_var_type
+from dexus_vault.utils.files import load_file
+from dexus_vault.utils.types import check_var_type
 from typing import Any, Dict, Optional
 
 
