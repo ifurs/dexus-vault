@@ -1,4 +1,5 @@
 # General Dex GRPC Message for Client
+## Need to be refactored to use the same logic as config.py
 _config_keys = [
     "id",
     "secret",
@@ -19,16 +20,21 @@ def parse_list(list_from_vault: str | list) -> list:
 
     if isinstance(list_from_vault, str):
         return list_from_vault.split(",")
-
     else:
         return []
+
+
+def parse_bool(bool_from_vault: bool | str) -> bool:
+    if isinstance(bool_from_vault, bool):
+        return bool_from_vault
+    return False
 
 
 def _fill_missing_keys(config: dict) -> dict:
     for key in _config_keys:
         if key in ["redirect_uris", "trusted_peers"]:
             config[key] = parse_list(config.get(key))
-        config["public"] = config.get("public", False)
+        config["public"] = parse_bool(config.get("public", False))
     return config
 
 
