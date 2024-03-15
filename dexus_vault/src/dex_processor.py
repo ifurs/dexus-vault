@@ -5,10 +5,10 @@ import logging
 from google.protobuf.json_format import MessageToDict
 
 # Load GRPC Stub and Methods from pb2 defined using protobuf builder
-from dexus_vault.grpc_dexidp.dexidp.api_pb2_grpc import DexStub
-import dexus_vault.grpc_dexidp.dexidp.api_pb2 as pb2
+from grpc_dexidp.dexidp.api_pb2_grpc import DexStub
+import grpc_dexidp.dexidp.api_pb2 as pb2
 
-from dexus_vault.utils.logger import logger
+from utils.logger import logger
 
 
 class DexClient:

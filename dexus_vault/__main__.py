@@ -1,7 +1,7 @@
 import threading
 
-from dexus_vault.client import run
-from dexus_vault.utils.logger import logger
+from client import run
+from utils.logger import logger
 
 # Try to import dotenv, if it's installed
 try:
@@ -12,7 +12,7 @@ except ImportError:
     logger.debug(f"if you want to use .env file, please install python-dotenv")
 
 
-def start_sync_thread():
+def main():
     """
     Start a new thread to run the synchronization process.
     """
@@ -27,4 +27,5 @@ def start_sync_thread():
 
 
 if __name__ == "__main__":
-    start_sync_thread()
+    logger.info("Starting dexus_vault...")
+    main()

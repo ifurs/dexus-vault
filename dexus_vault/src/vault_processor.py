@@ -1,9 +1,10 @@
 import hvac
-import logging
+import time
+import requests
+import sys
 
-from dexus_vault.utils.client_parser import normalize_config
-
-logger = logging.getLogger()
+from utils.client_parser import normalize_config
+from utils.logger import logger
 
 
 class VaultClient:
@@ -14,6 +15,30 @@ class VaultClient:
     def __init__(self, config: dict):
         self.config = config
         self.client = self.login_to_client()
+
+    def _check_vault_status(self, client: object) -> None:
+        """
+        Function validates if Vault is up and running
+        """
+        for _ in range(self.config["VAULT_MAX_RETRIES"]):
+            try:
+                response = client.sys.read_health_status(method="GET")
+                if isinstance(response, requests.Response):
+                    status = response.json()
+                else:
+                    status = response
+                if status["initialized"]:
+                    logger.debug(f"Vault {self.config['VAULT_ADDR']} is initialized")
+                    return True
+                else:
+                    logger.warning(
+                        f"Vault {self.config['VAULT_ADDR']} is not initialized {status}"
+                    )
+            except requests.exceptions.ConnectionError:
+                logger.warning(f"Vault {self.config['VAULT_ADDR']} connection failed")
+            time.sleep(self.config["VAULT_RETRY_WAIT"])
+        logger.error(f"Vault {self.config['VAULT_ADDR']} unreachable, exiting...")
+        sys.exit(1)
 
     def _check_if_vault_auth(self, client: object, auth_method: str) -> None:
         """
@@ -32,8 +57,8 @@ class VaultClient:
         """
         Define auth method for Vault and authentificate
         """
-
         client = hvac.Client(url=self.config["VAULT_ADDR"])
+        self._check_vault_status(client)
 
         if self.config["VAULT_APPROLE"] is not None:
             auth_method = "approle"
