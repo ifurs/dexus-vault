@@ -15,20 +15,10 @@ when you run dexus_vault, it will connects to provided Vault via `hvac` library 
 Currently Dex don't have native "Update" method, so dexus_vault will recreate client(keep in mind)
 
 ## How to install
-### from source
-For VMs or local running recommended to create isolated env using `python-venv` or whatever you use
-1. Clone the project
+The recommended installation method is using pip:
 ```sh
-git clone https://github.com/ifurs/dexus-vault.git
+pip install dexus-vault
 ```
-2. Install package
-```sh
-python -m pip install --upgrade setuptools wheel
-python3 -m pip install .
-```
-
-### from PyPi
-Not this time:)
 
 ## Run dexus_vault
 simply run
