@@ -1,7 +1,8 @@
 import os
+from typing import Any, Dict, Optional
+
 from dexus_vault.utils.files import load_file
 from dexus_vault.utils.types import check_var_type
-from typing import Any, Dict, Optional
 
 
 def _get_config_value(
