@@ -1,7 +1,7 @@
-import hvac
+import sys
 import time
 import requests
-import sys
+import hvac
 
 from dexus_vault.utils.client_parser import normalize_config
 from dexus_vault.utils.logger import logger

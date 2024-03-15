@@ -1,6 +1,7 @@
-import logging
 import os
 import sys
+import logging
+
 
 log_level = os.getenv("LOG_LEVEL", "INFO")
 # Define a format for your logs
