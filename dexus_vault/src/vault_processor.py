@@ -3,8 +3,8 @@ import time
 import requests
 import sys
 
-from utils.client_parser import normalize_config
-from utils.logger import logger
+from dexus_vault.utils.client_parser import normalize_config
+from dexus_vault.utils.logger import logger
 
 
 class VaultClient:
