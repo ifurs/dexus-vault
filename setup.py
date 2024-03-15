@@ -1,4 +1,6 @@
 import os
+from codecs import open
+
 from setuptools import setup, find_packages
 
 package_name = "dexus_vault"
@@ -17,8 +19,7 @@ setup(
     name=about["__title__"],
     version=about["__version__"],
     author="ifurs",
-    description=["__description__"],
-    # "Synchronizer of Dex clients with secrets stored in Vault over GRPC",
+    description=about["__description__"],
     long_description=long_description,
     long_description_content_type="text/markdown",
     url=about["__url__"],
@@ -41,7 +42,7 @@ setup(
         "grpcio-tools~=1.60.1",
         "googleapis-common-protos>=1.62.0",
         "protobuf~=4.25.3",
-        " hvac~=2.1.0",
+        "hvac~=2.1.0",
     ],
     python_requires=">=3.8",
     project_urls={"Source": about["__url__"]},
