@@ -1,43 +1,73 @@
 # DEXUS VAULT
-Synchronizer of Dex clients with secrets in Vault
 
 [![Latest Github release](https://img.shields.io/github/tag/ifurs/dexus-vault.svg)](https://github.com/ifurs/dexus-vault/releases/latest)
 ![Python](https://img.shields.io/badge/python-v3.8+-blue.svg)
 ![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)
 
-## Intro
+## **dexus-vault** - synchronizer of Dex clients with secrets in Vault
+
+## 🚩 Table of Contents
+
+- [About the project](#-about-the-project)
+  - [How it works](#how-it-works)
+- [Installation](#-installation)
+- [Usage](#-usage)
+- [Configuration](#-configuration)
+  - [General](#general)
+  - [Dex client configuration](#dex-client-configuration)
+    - [About Dex auth](#about-dex-auth)
+  - [Vault client configuration](#vault-client-configuration)
+    - [About Vault auth](#about-vault-auth)
+- [Vault secret structure](#-vault-secret-structure)
+- [Local Testing](#-local-testing)
+- [Other notes](#-other-notes)
+- [Thanks](#-thanks)
+
+## 🚀 About the project
+
 Dexus Vault is utility designed to synchronize Dex client configurations with secrets stored in Hashicorp Vault.
 This tool simplifies the management of Dex clients by automating the process of keeping them in sync with Vault secrets.
 
-## How it works
-when you run dexus_vault, it will connects to provided Vault via `hvac` library and collets secrets by provided path, then dexus_vault conncets to Dex Idp over GRPC and create/update clients.
+### How it works
+When you execute `dexus-vault`, it establishes a connection to the specified Vault using the `hvac` library and retrieves secrets from the provided path. Following this, `dexus-vault` connects to Dex IdP via gRPC and creates or updates clients.
 
-Currently Dex don't have native "Update" method, so dexus_vault will recreate client(keep in mind)
+> Please note that Dex does not currently support a native "Update" method. As a workaround, `dexus_vault` will recreate the client. Be aware of this behavior when using the tool.
 
-## How to install
-The recommended installation method is using pip:
-```sh
+## 💾 Installation
+
+The recommended installation method is using `pip`:
+
+```bash
 pip install dexus-vault
 ```
-and run it:
-```sh
-python -m dexus_vault
-```
 
-## Run dexus_vault
-simply run
-```sh
+## 📙 Usage
+
+if you've installed `dexus-vault` using `pip`, you can execute it with the following command:
+
+```bash
+dexus-vault
+```
+or like a python module:
+
+```bash
 python3 -m dexus_vault
 ```
-and it will start worker that syncs Dex clients with Vault secrets
 
-## Configuration
+This will initiate a process that synchronizes Dex clients with the secrets stored in Vault.
+
+## 🔧 Configuration
+
+Currently dexus-vault support only Environment variables.
+
 ### General
+
 | variable | required  | default | description |
 |:---------:|:---------:|:-------:|:------------:|
 | SYNC_INTERVAL | false | 60    | interval in seconds, dexus_vault will refresh in |
 
 ### Dex client configuration
+
 | variable | required  | default | description |
 |:---------:|:---------:|:-------:|:------------:|
 | DEX_GRPC_URL | false | 127.0.0.1:5557 | url, with your dex grpc |
@@ -45,10 +75,8 @@ and it will start worker that syncs Dex clients with Vault secrets
 | CLIENT_KEY | false | - | path to Dex GRPC client certificate key |
 | CA_CRT | false | - | path to Dex GRPC client certificate autority |
 
-#### About Dex auth
-if you not specified in dex certificates, simply skip them, and client will start insecure connection, also it is not required to use certificate authority when you specify client crt and client key.
-
 ### Vault client configuration
+
 | variable | required  | default | description |
 |:---------:|:---------:|:-------:|:------------:|
 | VAULT_ADDR | false | http://127.0.0.1:8200 | vault adress |
@@ -67,43 +95,54 @@ if you not specified in dex certificates, simply skip them, and client will star
 | VAULT_MAX_RETRIES | false | 20 | How many retries need to mark Vault unreacheble |
 | VAULT_RETRY_WAIT | false | 3 | How many seconds need to wait before next retry |
 
-#### About Vault auth
-You can choose any of:
-- token based
-- ldap
-- with cert
-- using approle, for that you need simply set `VAULT_APPROLE` to true, and when start, hvac will login to Vault via default maunted file by vault agent
+#### About Dex auth
 
-## Vault secret structure
-This example shows all available params for client(same as proto message)
+If you don't specify certificates for Dex, the client will establish an insecure connection. Note that it's not necessary to use a certificate authority when you provide a client certificate and key.
+
+#### About Vault auth
+
+There are several authentication methods available:
+
+- Token-based authentication
+- LDAP authentication
+- Certificate-based authentication
+- AppRole authentication: To use this method, set `VAULT_APPROLE` to `true`. The HVAC client will then log into Vault using the default file mounted by the Vault agent by default, also there is possible to specify approle id and secret via env vars too.
+
+## 🔒 Vault secret structure
+
+This example demonstrates all the parameters available for a client, which align with the Dex gRPC protocol message.
+
 ```json
 {
   "id": "my-first-client",
-  "secret": "", // put here your client secret
-  "logo_url": "https://picsum.photos/200/300", // example logo, not recommended
+  "secret": "",
+  "logo_url": "https://picsum.photos/200/300",
   "name": "My First Client",
   "public": false,
   "redirect_uris": ["http://127.0.0.1:5000/callback"],
   "trusted_peers": ["my-second-client"]
 }
+
 ```
-In Vault config `id` and `secret` are required, and `public` has default value `False` that enforced on dexus_vault level.
-For `public` default value is "False" but if you want to enable, plz, check if that var has bool type(Vault implementation), not a string.
-Also you may ask, how to define lists for `redirect_uris` and `trusted_peers`, you can do it in 2 ways:
-- native json list `["value1", "value2"]` but this will disale in Vault UI non-json view for that secret
-- using string with comma as delimeter `"value1,value2"` but it's not recommended and would be removed in future iterations
 
-## Local Testing
-The `docker/tests` directory contains a `docker-compose.yaml` file. This file is configured to run Vault and Dex locally for testing purposes. Please note that this setup is not intended for production use.
+In the Vault configuration, `id` and `secret` are mandatory fields. The `public` field defaults to `False` at the `dexus_vault` level. If you wish to enable `public`, ensure that it is set as a boolean type in your Vault implementation, not as a string.
 
-For additional information, refer to the [README](docker/tests/README.md) in the `docker/tests` directory.
+For defining lists in `redirect_uris` and `trusted_peers`, there are two methods:
 
-## About Dex GRPC
-All GRPC API methods dexus_vault use, defined in [api.proto](https://github.com/dexidp/dex/blob/v2.38.0/api/v2/api.proto)
+1. Use a native JSON list, e.g., `["value1", "value2"]`. Note that this will disable the non-JSON view for that secret in the Vault UI.
+2. Use a string with commas as delimiters, e.g., `"value1,value2"`. However, this method is not recommended and may be deprecated in future versions.
+
+## 💻 Local Testing
+
+The `docker/tests` directory houses a `docker-compose.yaml` file, designed to facilitate local testing by running both Vault and Dex. However, this configuration is not suitable for production environments.
+
+For more details, please see the [README](docker/tests/README.md).
+
+## 📓 Other notes
+- This projects uses pre-commit: https://pre-commit.com/
+
+- All gRPC API methods dexus_vault use, defined in [api.proto](https://github.com/dexidp/dex/blob/v2.38.0/api/v2/api.proto)
 and compiled with `grpc_tools.protoc`
 
-## Other notes
-This projects uses pre-commit: https://pre-commit.com/
-
-# THANKS
+## 🔥 Thanks
 - [Hurlenko](https://github.com/hurlenko) for references copied from your repos
