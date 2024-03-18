@@ -65,6 +65,8 @@ Currently dexus-vault support only Environment variables.
 | variable | required  | default | description |
 |:---------:|:---------:|:-------:|:------------:|
 | SYNC_INTERVAL | false | 60    | interval in seconds, dexus_vault will refresh in |
+| LOG_LEVEL | false | INFO | set log level(logging lib) |
+
 
 ### Dex client configuration
 
