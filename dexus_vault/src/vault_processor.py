@@ -99,7 +99,7 @@ class VaultClient:
             client.token = self.config["VAULT_TOKEN"]
 
         else:
-            raise KeyError(f"AUTH method not specified!")
+            raise KeyError(f"Vault auth method is not specified!")
 
         self._check_if_vault_auth(client, auth_method)
         return client
@@ -109,7 +109,7 @@ class VaultClient:
         List secrets from Vault by path
         """
         response = self.client.secrets.kv.v2.list_secrets(
-            self.config["VAULT_CLIENTS_PATHS"],
+            self.config["VAULT_CLIENTS_PATH"],
             mount_point=self.config["VAULT_MOUNT_POINT"],
         )
         return response["data"]["keys"]
@@ -119,7 +119,7 @@ class VaultClient:
         Read specified secret from Vault
         """
         response = self.client.secrets.kv.read_secret_version(
-            path=f"{self.config['VAULT_CLIENTS_PATHS']}/{secret_path}",
+            path=f"{self.config['VAULT_CLIENTS_PATH']}/{secret_path}",
             mount_point=self.config["VAULT_MOUNT_POINT"],
         )
         return response["data"]["data"]

@@ -41,6 +41,13 @@ The recommended installation method is using `pip`:
 pip install dexus-vault
 ```
 
+Using `docker`:
+
+```bash
+docker run ifurs/dexus-vault
+```
+you can find docker image [here](https://github.com/ifurs/dexus-vault/docker/image)
+
 ## 📙 Usage
 
 if you've installed `dexus-vault` using `pip`, you can execute it with the following command:
@@ -65,6 +72,8 @@ Currently dexus-vault support only Environment variables.
 | variable | required  | default | description |
 |:---------:|:---------:|:-------:|:------------:|
 | SYNC_INTERVAL | false | 60    | interval in seconds, dexus_vault will refresh in |
+| LOG_LEVEL | false | INFO | set log level(logging lib) |
+
 
 ### Dex client configuration
 
@@ -80,7 +89,7 @@ Currently dexus-vault support only Environment variables.
 | variable | required  | default | description |
 |:---------:|:---------:|:-------:|:------------:|
 | VAULT_ADDR | false | http://127.0.0.1:8200 | vault adress |
-| VAULT_CLIENTS_PATHS | true | - | path in vault where clients could be found |
+| VAULT_CLIENTS_PATH | true | - | path in vault where clients could be found |
 | VAULT_MOUNT_POINT | false | - | vault [mount point](https://developer.hashicorp.com/vault/tutorials/enterprise/namespace-structure#understand-vault-s-mount-points) |
 | VAULT_TOKEN | false | - | used to auth to Vault via token |
 | VAULT_CERT | false | - | Vault client certificate path |

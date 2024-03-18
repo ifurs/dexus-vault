@@ -10,7 +10,6 @@ from dexus_vault.utils.client_parser import normalize_config
 
 
 SYNC_INTERVAL = os.getenv("SYNC_INTERVAL", 60)
-VAULT_TIMEOUT = os.getenv("VAULT_TIMEOUT", 300)
 
 
 def sync_dex_clients(dex_client: object, vault_clients: list) -> set:
@@ -38,7 +37,6 @@ def sync_dex_clients(dex_client: object, vault_clients: list) -> set:
                     dex_client.create_dex_client(client)
         else:
             logger.info(f"CLIENT {client.get('id')} not found, will be created")
-            print(client)
             dex_client.create_dex_client(client)
 
 

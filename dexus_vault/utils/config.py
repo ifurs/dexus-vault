@@ -52,6 +52,6 @@ def get_vault_config() -> Dict[str, Any]:
         "VAULT_NAMESPACE": _get_config_value("VAULT_NAMESPACE", str),
         "VAULT_PROXIES": _get_config_value("VAULT_PROXIES", dict),
         "VAULT_MOUNT_POINT": _get_config_value("VAULT_MOUNT_POINT", str),
-        "VAULT_CLIENTS_PATHS": _get_config_value("VAULT_CLIENTS_PATHS", str),
+        "VAULT_CLIENTS_PATH": _get_config_value("VAULT_CLIENTS_PATH", str),
     }
     return config
