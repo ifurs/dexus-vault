@@ -41,6 +41,13 @@ The recommended installation method is using `pip`:
 pip install dexus-vault
 ```
 
+Using `docker`:
+
+```bash
+docker run ifurs/dexus-vault
+```
+you can find docker image [here](https://github.com/ifurs/dexus-vault/docker/image)
+
 ## 📙 Usage
 
 if you've installed `dexus-vault` using `pip`, you can execute it with the following command:
