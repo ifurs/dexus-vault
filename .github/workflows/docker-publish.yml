@@ -1,10 +1,10 @@
 name: Publish Docker 🐳 image 📦 to DockerHub
-on: 
+on:
   workflow_call:
   workflow_dispatch:
   # schedule:
   # - cron:  '0 0 * * *'
-    
+
 env:
   # github.repository as <account>/<repo>
   IMAGE_NAME: ${{ github.repository }}
