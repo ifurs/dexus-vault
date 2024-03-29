@@ -43,6 +43,7 @@ setup(
         "googleapis-common-protos>=1.62.0",
         "protobuf~=4.25.3",
         "hvac~=2.1.0",
+        "prometheus_client~=0.20.0",
     ],
     python_requires=">=3.8",
     project_urls={"Source": about["__url__"]},

@@ -5,6 +5,7 @@ import hvac
 
 from dexus_vault.utils.client_parser import normalize_config
 from dexus_vault.utils.logger import logger
+from dexus_vault.utils.metrics import vault_client_secret
 
 
 class VaultClient:
@@ -133,9 +134,10 @@ class VaultClient:
             config = normalize_config(self.vault_read_secret(secret_path=secret))
             if config is not None:
                 _client_config.append(config)
-
+                vault_client_secret.labels(secret_name=secret, status="ok").inc()
             else:
                 logger.warning(
                     f"Secret '{secret}' in Vault, missing 'id' and 'secret' keys, or have incorrect structure"
                 )
+                vault_client_secret.labels(secret_name=secret, status="failed").inc()
         return _client_config
