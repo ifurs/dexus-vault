@@ -71,9 +71,11 @@ Currently dexus-vault support only Environment variables.
 
 | variable | required  | default | description |
 |:---------:|:---------:|:-------:|:------------:|
-| SYNC_INTERVAL | false | 60    | interval in seconds, dexus_vault will refresh in |
-| LOG_LEVEL | false | INFO | set log level(logging lib) |
-
+| SYNC_INTERVAL | false | 60    | Interval in seconds, dexus_vault will refresh in |
+| LOG_LEVEL | false | INFO | Set log level(logging lib) |
+| METRICS_ENABLE | false | True | Enable prometheus metrics publisher |
+| METRICS_PORT | false | 8000 | Set Metrics port, reuire METRICS_ENABLE to be enabled |
+| INTERNAL_METRICS | false | False | Enable the built-in metrics for Python (not application-specific) |
 
 ### Dex client configuration
 
@@ -117,6 +119,17 @@ There are several authentication methods available:
 - Certificate-based authentication
 - AppRole authentication: To use this method, set `VAULT_APPROLE` to `true`. The HVAC client will then log into Vault using the default file mounted by the Vault agent by default, also there is possible to specify approle id and secret via env vars too.
 
+### Metrics
+
+For now "dexus-vault" publish simplified metrics, like this:
+
+```json
+client_create{client_id="my-first-dex-client", status="ok"} 1.0
+```
+for "status" could be values "ok" and "failed"
+
+> **NOTE:** We plan to redesign the metrics system in the near future. Any contributions to this effort are greatly appreciated.
+
 ## 🔒 Vault secret structure
 
 This example demonstrates all the parameters available for a client, which align with the Dex gRPC protocol message.
@@ -131,7 +144,6 @@ This example demonstrates all the parameters available for a client, which align
   "redirect_uris": ["http://127.0.0.1:5000/callback"],
   "trusted_peers": ["my-second-client"]
 }
-
 ```
 
 In the Vault configuration, `id` and `secret` are mandatory fields. The `public` field defaults to `False` at the `dexus_vault` level. If you wish to enable `public`, ensure that it is set as a boolean type in your Vault implementation, not as a string.
@@ -152,6 +164,17 @@ For more details, please see the [README](docker/tests/README.md).
 
 - All gRPC API methods dexus_vault use, defined in [api.proto](https://github.com/dexidp/dex/blob/v2.38.0/api/v2/api.proto)
 and compiled with `grpc_tools.protoc`
+
+## Roadmap
+
+Plans for future:
+
+- [ ] Redesign metrics concept to make it more Prometheus friendly
+- [ ] Switch to pydantic
+- [ ] Implement functionality that tracks current clients state in Dex
+- [ ] Make logs more Fluent
+- [ ] Redisign dexus-vault to work like cli and accepts params
+- [ ] Implement feature to use other storage options
 
 ## 🔥 Thanks
 - [Hurlenko](https://github.com/hurlenko) for references copied from your repos

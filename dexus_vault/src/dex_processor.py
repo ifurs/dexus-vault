@@ -8,6 +8,7 @@ from dexus_vault.grpc_dexidp.dexidp.api_pb2_grpc import DexStub
 import dexus_vault.grpc_dexidp.dexidp.api_pb2 as pb2
 
 from dexus_vault.utils.logger import logger
+from dexus_vault.utils.metrics import client_create_metric, client_delete_metric
 
 
 class DexClient:
@@ -82,36 +83,54 @@ class DexClient:
         """
         Create OIDC client in Dex
         """
-        request = pb2.CreateClientReq()
-        request.client.id = client.get("id")
-        request.client.secret = client.get("secret")
-        request.client.redirect_uris.extend(client.get("redirect_uris", ""))
-        request.client.trusted_peers.extend(client.get("trusted_peers", ""))
-        request.client.public = client.get("public", 0)
-        request.client.name = client.get("name", "")
-        request.client.logo_url = client.get("logo_url", "")
+        try:
+            request = pb2.CreateClientReq()
+            request.client.id = client.get("id")
+            request.client.secret = client.get("secret")
+            request.client.redirect_uris.extend(client.get("redirect_uris", ""))
+            request.client.trusted_peers.extend(client.get("trusted_peers", ""))
+            request.client.public = client.get("public", 0)
+            request.client.name = client.get("name", "")
+            request.client.logo_url = client.get("logo_url", "")
 
-        response = MessageToDict(DexStub(self.channel).CreateClient(request))
-        if response.get("client", None) is not None:
-            client_id = response.get("client").get("id")
-            logger.info(f"Created new Dex client '{client_id}'")
-            return client_id
+            response = MessageToDict(DexStub(self.channel).CreateClient(request))
+            if response.get("client", None) is not None:
+                client_id = response.get("client").get("id")
+                client_create_metric.labels(client_id=client_id, status="ok").inc()
+                logger.info(f"Created new Dex client '{client_id}'")
+                return client_id
+            else:
+                logger.warning(f"RESPONSE FROM GRPC: {response}")
+
+        except Exception as error:
+            client_create_metric.labels(
+                client_id=client.get("id"), status="failed"
+            ).inc()
+            logger.error(f"Failed to create client {client.get('id')}")
+            logger.error(f"RESPONSE FROM GRPC: {error}")
 
     def delete_dex_client(self, client_id: str) -> None:
         """
         Delete OIDC client in Dex
         """
-        dex_request = pb2.DeleteClientReq()
-        dex_request.id = client_id
+        try:
+            dex_request = pb2.DeleteClientReq()
+            dex_request.id = client_id
 
-        # Because of Dex implementation, this request returns None
-        # Or simple dict {'notFound': True} so it need to be processed
-        response = MessageToDict(DexStub(self.channel).DeleteClient(dex_request))
+            # Because of Dex implementation, this request returns None
+            # Or simple dict {'notFound': True} so it need to be processed
+            response = MessageToDict(DexStub(self.channel).DeleteClient(dex_request))
 
-        if response.get("notFound", None) is not None:
-            logger.warning(f"Client '{client_id}' not found")
-        else:
-            logger.info(f"client {client_id} was deleted")
+            if response.get("notFound", None) is not None:
+                client_delete_metric.labels(client_id=client_id, status="failed").inc()
+                logger.warning(f"Client '{client_id}' not found")
+            else:
+                client_create_metric.labels(client_id=client_id, status="ok").inc()
+                logger.info(f"client {client_id} was deleted")
+        except Exception as error:
+            client_delete_metric.labels(client_id=client_id, status="failed").inc()
+            logger.error(f"Failed to delete client {client_id}")
+            logger.error(f"RESPONSE FROM GRPC: {error}")
 
     def __del__(self):
         """
