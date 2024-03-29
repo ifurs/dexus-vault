@@ -1,3 +1,4 @@
+import time
 import grpc
 
 # Import function that transform GRPC Message into Python dict
@@ -13,7 +14,7 @@ from dexus_vault.utils.metrics import client_create_metric, client_delete_metric
 
 class DexClient:
     """
-    This class defines all logic for operating with Dex GRPC API
+    This class defines all logic for operating with Dex gRPC API
     """
 
     def __init__(self, config):
@@ -26,7 +27,7 @@ class DexClient:
     # crete grpc connection to Dex
     def dex_grpc_connect(self) -> object:
         """
-        Open connection to Dex GRPC
+        Open connection to Dex gRPC
         """
 
         if self.config["CLIENT_CRT"]:
@@ -44,10 +45,27 @@ class DexClient:
 
     def dex_grpc_close_connection(self):
         """
-        Close connection to Dex GRPC
+        Close connection to Dex gRPC
         """
         if self.channel:
             self.channel.close()
+
+    def dex_waiter(self) -> bool:
+        """
+        Ensure connection to Dex gRPC
+        """
+        _retry = 0
+        while True:
+            try:
+                logger.info(f"Dex server version {self.get_dex_version()}")
+                return True
+            except Exception as error:
+                if _retry >= self.config["DEX_MAX_RETRIES"]:
+                    raise RuntimeError(f"Could not connect to Dex gRPC server: {error}")
+                else:
+                    _retry += 1
+                    logger.debug(f"Dex gRPC is unavalable, retying...")
+                    time.sleep(self.config["DEX_RETRY_WAIT"])
 
     def get_dex_version(self) -> dict:
         """
@@ -134,7 +152,7 @@ class DexClient:
 
     def __del__(self):
         """
-        Everytime DexClient object delets, this will close GRPC connection
+        Everytime DexClient object delets, this will close gRPC connection
         """
         self.dex_grpc_close_connection()
         logger.debug(f"Dex connection closed")

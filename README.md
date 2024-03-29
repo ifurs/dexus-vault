@@ -85,6 +85,8 @@ Currently dexus-vault support only Environment variables.
 | CLIENT_CRT | false | - | path to Dex GRPC client certificate |
 | CLIENT_KEY | false | - | path to Dex GRPC client certificate key |
 | CA_CRT | false | - | path to Dex GRPC client certificate autority |
+| DEX_MAX_RETRIES | false | 20 | How many retries need to wait for Dex to be reacheble |
+| DEX_RETRY_WAIT | false | 3 | How many seconds need to wait before next retry |
 
 ### Vault client configuration
 

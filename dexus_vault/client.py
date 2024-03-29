@@ -44,16 +44,16 @@ def sync_dex_clients(dex_client: object, vault_clients: list) -> set:
             if client.get("id") == client_from_dex.get("id"):
 
                 if client == client_from_dex:
-                    logger.debug(f"CLIENT {client_from_dex.get('id')} already exist.")
+                    logger.debug(f"Client '{client_from_dex.get('id')}' already exist.")
 
                 else:
                     logger.info(
-                        f"Detected changes in {client_from_dex.get('id')} client configuration, will be recreated"
+                        f"Detected changes in '{client_from_dex.get('id')}' client configuration, will be recreated"
                     )
                     dex_client.delete_dex_client(client_from_dex.get("id"))
                     dex_client.create_dex_client(client)
         else:
-            logger.info(f"CLIENT {client.get('id')} not found, will be created")
+            logger.info(f"Client '{client.get('id')}' not found, will be created")
             dex_client.create_dex_client(client)
 
 
@@ -61,12 +61,13 @@ def run():
     """
     Main function to run the Dex client and Vault client synchronization.
     """
-    # TODO: add waiter functionality
+
     dex_client = DexClient(config=get_dex_config())
     metrics_server()
-    logger.info(f"Dex server version {dex_client.get_dex_version()}")
+    dex_client.dex_waiter()
 
     while True:
+
         dex_client = DexClient(config=get_dex_config())
         vault_client = VaultClient(config=get_vault_config())
         client_configs = vault_client.vault_read_secrets()

@@ -25,6 +25,8 @@ def get_dex_config() -> Dict[str, Any]:
         "CLIENT_KEY": load_file(_get_config_value("CLIENT_KEY", str)),
         "CA_CRT": load_file(_get_config_value("CA_CRT", str)),
         "DEX_GRPC_URL": _get_config_value("DEX_GRPC_URL", str, "127.0.0.1:5557"),
+        "DEX_MAX_RETRIES": _get_config_value("DEX_MAX_RETRIES", int, 20),
+        "DEX_RETRY_WAIT": _get_config_value("DEX_RETRY_WAIT", int, 3),
     }
     return config
 
