@@ -123,7 +123,7 @@ There are several authentication methods available:
 
 For now "dexus-vault" publish simplified metrics, like this:
 
-```json
+```bash
 client_create{client_id="my-first-dex-client", status="ok"} 1.0
 ```
 for "status" could be values "ok" and "failed"
