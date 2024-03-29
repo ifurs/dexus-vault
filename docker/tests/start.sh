@@ -1,3 +1,4 @@
+# TODO: remove export and exec in alias
 alias exec_vault=`docker exec -ti vault`
 export VAULT_ADDR="http://127.0.0.1:8200"
 

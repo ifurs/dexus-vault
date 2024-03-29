@@ -5,11 +5,28 @@ from dexus_vault.src.dex_processor import DexClient
 from dexus_vault.src.vault_processor import VaultClient
 
 from dexus_vault.utils.logger import logger
-from dexus_vault.utils.config import get_vault_config, get_dex_config
+from dexus_vault.utils.metrics import start_metrics_server
+from dexus_vault.utils.config import (
+    get_vault_config,
+    get_dex_config,
+    get_metrics_config,
+)
 from dexus_vault.utils.client_parser import normalize_config
 
 
 SYNC_INTERVAL = os.getenv("SYNC_INTERVAL", 60)
+
+
+def metrics_server():
+    """
+    Start the Prometheus metrics server.
+    """
+    metrics_config = get_metrics_config()
+    start_metrics_server(
+        metrics_config.get("INTERNAL_METRICS"),
+        metrics_config.get("METRICS_ENABLE"),
+        metrics_config.get("METRICS_PORT"),
+    )
 
 
 def sync_dex_clients(dex_client: object, vault_clients: list) -> set:
@@ -44,7 +61,9 @@ def run():
     """
     Main function to run the Dex client and Vault client synchronization.
     """
+    # TODO: add waiter functionality
     dex_client = DexClient(config=get_dex_config())
+    metrics_server()
     logger.info(f"Dex server version {dex_client.get_dex_version()}")
 
     while True:
