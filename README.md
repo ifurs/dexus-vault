@@ -97,7 +97,7 @@ Currently dexus-vault support only Environment variables.
 |:---------:|:---------:|:-------:|:------------:|
 | VAULT_CLIENTS_PATH | yes | - | path in vault where clients could be found |
 | VAULT_ADDR | - | <http://127.0.0.1:8200> | vault address |
-| VAULT_MOUNT_POINT | - | - | vault [mount point](https://developer.hashicorp.com/vault/tutorials/enterprise/namespace-structure#understand-vault-s-mount-points) |
+| VAULT_MOUNT_POINT | - | - | vault [mount point](https://developer.hashicorp.com/vault/tutorials/enterprise/namespace-structure#understand-vault-s-mount-points) by default vault client uses "secret" |
 | VAULT_TOKEN | - | - | used to auth to Vault via token |
 | VAULT_CERT | - | - | Vault client certificate path |
 | VAULT_CERT_KEY | - | - | Vault client certificate key path |
