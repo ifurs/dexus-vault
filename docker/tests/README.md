@@ -6,9 +6,9 @@ Docs about running local testing
 
 ## How to run it
 
-run `docker-compose up -d` and do everything manualy :neutral_face:
+run `docker-compose up -d` and do everything manually :neutral_face:
 
-### Automated proces
+### Automated process
 
 simply run with your shell(tested on bash and zsh):
 
@@ -18,7 +18,7 @@ simply run with your shell(tested on bash and zsh):
 
 Here is going real magic :star2:! I'm kidding, that's just a shell script `start.sh` with sleep, that runs:
 
-1. docker-compose up for Dex and Vault services, by default they are accesible on localhost:
+1. docker-compose up for Dex and Vault services, by default they are accessible on localhost:
 
     - `5556` Dex Web port
     - `5557` Dex GRPC port

@@ -64,7 +64,7 @@ class DexClient:
                     raise RuntimeError(f"Could not connect to Dex gRPC server: {error}")
                 else:
                     _retry += 1
-                    logger.debug(f"Dex gRPC is unavalable, retying...")
+                    logger.debug(f"Dex gRPC is unavailable, retying...")
                     time.sleep(self.config["DEX_RETRY_WAIT"])
 
     def get_dex_version(self) -> dict:
@@ -152,7 +152,7 @@ class DexClient:
 
     def __del__(self):
         """
-        Everytime DexClient object delets, this will close gRPC connection
+        Every time DexClient object deletes, this will close gRPC connection
         """
         self.dex_grpc_close_connection()
         logger.debug(f"Dex connection closed")
