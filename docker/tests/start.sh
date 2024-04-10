@@ -70,10 +70,11 @@ vault_enable_kv() {
 }
 
 vault_create_secrets() {
+    # ls -dq client*.json | wc -l
     exec_vault vault kv put kv/dex/client1 @templ/client1.json > /dev/null
     exec_vault vault kv put kv/dex/client2 @templ/client2.json > /dev/null
-    exec_vault vault kv put kv/dex/client2 @templ/client3.json > /dev/null
-    exec_vault vault kv put kv/dex/client2 @templ/client4.json > /dev/null
+    exec_vault vault kv put kv/dex/client3 @templ/client3.json > /dev/null
+    exec_vault vault kv put kv/dex/client4 @templ/client4.json > /dev/null
 }
 
 vault_create_test() {
