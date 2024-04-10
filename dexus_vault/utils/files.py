@@ -3,7 +3,7 @@ import os
 
 def load_file(filepath: str) -> bytes:
     """
-    Loads file from filepath(preffered absolute path)
+    Loads file from filepath(preferred absolute path)
     """
     if filepath is not None:
         real_path = os.path.join(os.getcwd(), filepath)
