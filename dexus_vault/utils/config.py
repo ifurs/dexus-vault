@@ -46,7 +46,7 @@ def get_vault_config() -> Dict[str, Any]:
     """
     Get the configuration as a dictionary, with type-checked values.
     """
-    # TODO: Check if it realy need assignment
+    # TODO: Check if it really need assignment
     config = {
         "VAULT_ADDR": _get_config_value("VAULT_ADDR", str, "http://127.0.0.1:8200"),
         "VAULT_APPROLE": _get_config_value("VAULT_APPROLE", str),
