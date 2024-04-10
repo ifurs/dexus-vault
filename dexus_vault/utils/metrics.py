@@ -1,7 +1,6 @@
 from prometheus_client import (
     start_http_server,
     Counter,
-    Summary,
     REGISTRY,
     PROCESS_COLLECTOR,
     PLATFORM_COLLECTOR,

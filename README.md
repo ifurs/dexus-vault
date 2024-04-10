@@ -29,6 +29,7 @@ Dexus Vault is utility designed to synchronize Dex client configurations with se
 This tool simplifies the management of Dex clients by automating the process of keeping them in sync with Vault secrets.
 
 ### How it works
+
 When you execute `dexus-vault`, it establishes a connection to the specified Vault using the `hvac` library and retrieves secrets from the provided path. Following this, `dexus-vault` connects to Dex IdP via gRPC and creates or updates clients.
 
 > Please note that Dex does not currently support a native "Update" method. As a workaround, `dexus_vault` will recreate the client. Be aware of this behavior when using the tool.
@@ -46,6 +47,7 @@ Using `docker`:
 ```bash
 docker run ifurs/dexus-vault
 ```
+
 you can find docker image [here](https://github.com/ifurs/dexus-vault/docker/image)
 
 ## 📙 Usage
@@ -55,6 +57,7 @@ if you've installed `dexus-vault` using `pip`, you can execute it with the follo
 ```bash
 dexus-vault
 ```
+
 or like a python module:
 
 ```bash
@@ -71,42 +74,42 @@ Currently dexus-vault support only Environment variables.
 
 | variable | required  | default | description |
 |:---------:|:---------:|:-------:|:------------:|
-| SYNC_INTERVAL | false | 60    | Interval in seconds, dexus_vault will refresh in |
-| LOG_LEVEL | false | INFO | Set log level(logging lib) |
-| METRICS_ENABLE | false | True | Enable prometheus metrics publisher |
-| METRICS_PORT | false | 8000 | Set Metrics port, reuire METRICS_ENABLE to be enabled |
-| INTERNAL_METRICS | false | False | Enable the built-in metrics for Python (not application-specific) |
+| SYNC_INTERVAL | - | 60    | Interval in seconds, dexus_vault will refresh in |
+| LOG_LEVEL | - | INFO | Set log level(logging lib) |
+| METRICS_ENABLE | - | True | Enable prometheus metrics publisher |
+| METRICS_PORT | - | 8000 | Set Metrics port, require METRICS_ENABLE to be enabled |
+| INTERNAL_METRICS | - | False | Enable the built-in metrics for Python (not application-specific) |
 
 ### Dex client configuration
 
 | variable | required  | default | description |
 |:---------:|:---------:|:-------:|:------------:|
-| DEX_GRPC_URL | false | 127.0.0.1:5557 | url, with your dex grpc |
-| CLIENT_CRT | false | - | path to Dex GRPC client certificate |
-| CLIENT_KEY | false | - | path to Dex GRPC client certificate key |
-| CA_CRT | false | - | path to Dex GRPC client certificate autority |
-| DEX_MAX_RETRIES | false | 20 | How many retries need to wait for Dex to be reacheble |
-| DEX_RETRY_WAIT | false | 3 | How many seconds need to wait before next retry |
+| DEX_GRPC_URL | - | 127.0.0.1:5557 | url, with your dex grpc |
+| CLIENT_CRT | - | - | path to Dex GRPC client certificate |
+| CLIENT_KEY | - | - | path to Dex GRPC client certificate key |
+| CA_CRT | - | - | path to Dex GRPC client certificate authority |
+| DEX_MAX_RETRIES | - | 20 | How many retries need to wait for Dex to be reachable |
+| DEX_RETRY_WAIT | - | 3 | How many seconds need to wait before next retry |
 
 ### Vault client configuration
 
 | variable | required  | default | description |
 |:---------:|:---------:|:-------:|:------------:|
-| VAULT_ADDR | false | http://127.0.0.1:8200 | vault adress |
-| VAULT_CLIENTS_PATH | true | - | path in vault where clients could be found |
-| VAULT_MOUNT_POINT | false | - | vault [mount point](https://developer.hashicorp.com/vault/tutorials/enterprise/namespace-structure#understand-vault-s-mount-points) |
-| VAULT_TOKEN | false | - | used to auth to Vault via token |
-| VAULT_CERT | false | - | Vault client certificate path |
-| VAULT_CERT_KEY | false | - | Vault client certificate key path |
-| VAULT_CERT_CA | false | - | Vault certficate authority path or bool, `false` - do not validate, `true` - validate with internal trustore |
-| VAULT_LDAP_USERNAME | false | - | LDAP username used to auth to Vault |
-| VAULT_LDAP_PASSWORD | false | - | LDAP password used to auth to Vault |
-| VAULT_APPROLE | false | - | bool value, used to identify to use APPROLE auth |
-| VAULT_APPROLE_ROLE_ID | false | - | Vault approle role id |
-| VAULT_APPROLE_SECRET_ID | false | - | Vault approle secret id |
-| VAULT_APPROLE_PATH | false | - | Vault approle path, use it if agent mount approle file in other than default directory |
-| VAULT_MAX_RETRIES | false | 20 | How many retries need to mark Vault unreacheble |
-| VAULT_RETRY_WAIT | false | 3 | How many seconds need to wait before next retry |
+| VAULT_CLIENTS_PATH | yes | - | path in vault where clients could be found |
+| VAULT_ADDR | - | <http://127.0.0.1:8200> | vault address |
+| VAULT_MOUNT_POINT | - | - | vault [mount point](https://developer.hashicorp.com/vault/tutorials/enterprise/namespace-structure#understand-vault-s-mount-points) |
+| VAULT_TOKEN | - | - | used to auth to Vault via token |
+| VAULT_CERT | - | - | Vault client certificate path |
+| VAULT_CERT_KEY | - | - | Vault client certificate key path |
+| VAULT_CERT_CA | - | - | Vault certificate authority path or bool, `false` - do not validate, `true` - validate with internal truststore |
+| VAULT_LDAP_USERNAME | - | - | LDAP username used to auth to Vault |
+| VAULT_LDAP_PASSWORD | - | - | LDAP password used to auth to Vault |
+| VAULT_APPROLE | - | - | bool value, used to identify to use APPROLE auth |
+| VAULT_APPROLE_ROLE_ID | - | - | Vault approle role id |
+| VAULT_APPROLE_SECRET_ID | - | - | Vault approle secret id |
+| VAULT_APPROLE_PATH | - | - | Vault approle path, use it if agent mount approle file in other than default directory |
+| VAULT_MAX_RETRIES | - | 20 | How many retries need to mark Vault unreachable |
+| VAULT_RETRY_WAIT | - | 3 | How many seconds need to wait before next retry |
 
 #### About Dex auth
 
@@ -128,6 +131,7 @@ For now "dexus-vault" publish simplified metrics, like this:
 ```bash
 client_create{client_id="my-first-dex-client", status="ok"} 1.0
 ```
+
 for "status" could be values "ok" and "failed"
 
 > **NOTE:** We plan to redesign the metrics system in the near future. Any contributions to this effort are greatly appreciated.
@@ -162,7 +166,8 @@ The `docker/tests` directory houses a `docker-compose.yaml` file, designed to fa
 For more details, please see the [README](docker/tests/README.md).
 
 ## 📓 Other notes
-- This projects uses pre-commit: https://pre-commit.com/
+
+- This projects uses pre-commit: <https://pre-commit.com/>
 
 - All gRPC API methods dexus_vault use, defined in [api.proto](https://github.com/dexidp/dex/blob/v2.38.0/api/v2/api.proto)
 and compiled with `grpc_tools.protoc`
@@ -175,8 +180,9 @@ Plans for future:
 - [ ] Switch to pydantic
 - [ ] Implement functionality that tracks current clients state in Dex
 - [ ] Make logs more Fluent
-- [ ] Redisign dexus-vault to work like cli and accepts params
+- [ ] Redesign dexus-vault to work like cli and accepts params
 - [ ] Implement feature to use other storage options
 
 ## 🔥 Thanks
+
 - [Hurlenko](https://github.com/hurlenko) for references copied from your repos

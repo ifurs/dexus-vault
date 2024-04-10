@@ -13,7 +13,7 @@ _config_keys = [
 
 def parse_list(list_from_vault: str | list) -> list:
     """
-    Nativly Vault can't support lists in UI(except json view), omg Hashicop:)
+    Natively Vault can't support lists in UI(except json view), omg Hashicorp:)
     """
     if isinstance(list_from_vault, list):
         return list_from_vault
@@ -38,9 +38,9 @@ def _fill_missing_keys(config: dict) -> dict:
     return config
 
 
-def _camel_case_to_undercore(config: dict) -> dict:
+def _camel_case_to_underscore(config: dict) -> dict:
     """
-    Tranform camel case response from Dex GRPC
+    Transform camel case response from Dex GRPC
     """
     return {
         "".join(["_" + i.lower() if i.isupper() else i for i in key]).lstrip("_"): value
@@ -50,10 +50,10 @@ def _camel_case_to_undercore(config: dict) -> dict:
 
 def normalize_config(client_config: dict) -> dict | None:
     """
-    Normilize Dex config to one standart.
+    Normalize Dex config to one standard.
     I know, re is better, but I don't like it
     """
     if {"id", "secret"}.issubset(client_config.keys()):
-        config = _camel_case_to_undercore(client_config)
+        config = _camel_case_to_underscore(client_config)
         return _fill_missing_keys(config)
     return None
