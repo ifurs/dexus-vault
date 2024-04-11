@@ -16,7 +16,7 @@ client_delete_metric = Counter("client_delete", "Client deletion status", ["stat
 vault_client_secret = Counter(
     "vault_client_secret",
     "Number of wrong client specifications in Vault",
-    ["secret_name", "status"],
+    ["status"],
 )
 # SYNC_TIME = Summary("sync_time_seconds", "Time spent on synchronization")
 
