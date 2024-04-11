@@ -137,14 +137,15 @@ class VaultClient:
                 path=f"{self.config['VAULT_CLIENTS_PATH']}/{secret_path}",
                 mount_point=self.config["VAULT_MOUNT_POINT"],
             )
+            return response["data"]
 
         elif self.config["VAULT_ENGINE"] == "v2":
             response = self.client.secrets.kv.read_secret_version(
                 path=f"{self.config['VAULT_CLIENTS_PATH']}/{secret_path}",
                 mount_point=self.config["VAULT_MOUNT_POINT"],
             )
-
-        return response["data"]["data"]
+            return response["data"]["data"]
+        return None
 
     def vault_read_secrets(self) -> list:
         """
