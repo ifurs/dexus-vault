@@ -48,24 +48,23 @@ Here is going real magic :star2:! I'm kidding, that's just a shell script `start
     - create simple policy for read and list under `kv/dex` path, so if you want to view from UI, type full path, or change policy
     - create token with policy from previous step
 
-4. (Optional) If you specify "dexus_vault" as second argument for script, it will also start dexus_vault latest container and start syncing Dex with Vault
+4. (Optional) If you specify "dexus_vault" as second argument for script, it will also start dexus_vault latest container and start syncing Dex with Vault. You can skip next steps if you choose to run with dexus_vault, env file will be generated automatically
 
-5. after all steps, you will get something like this:
+5. After all steps above, you will get something like this:
 
     ```sh
         ______ Use this token to access client secrets in Vault _______
-        Key                  Value
-        ---                  -----
-        token                hvs.CAESINAH6-fnernJHBHJBVUHVvvuyvuwvweefw
-        token_accessor       JBHbuyguybBHHJDU
-        token_duration       768h
-        token_renewable      true
-        token_policies       ["default" "policy1"]
-        identity_policies    []
-        policies             ["default" "policy1"]
+        export VAULT_TOKEN=...
     ```
 
-    just copy `token` and add it to your env `VAULT_TOKEN=...`
+6. Generate env file(if run from source) or set in env next variables:
+
+    ```sh
+    VAULT_TOKEN=<token_from_step_5>
+    VAULT_ADDR=http://127.0.0.1:8200
+    VAULT_MOUNT_POINT=kv
+    VAULT_CLIENTS_PATH=dex
+    ```
 
 By default it enables Dex GRPC insecure, but still, you can use any cert gen script, like [this](https://github.com/dexidp/dex/tree/master/examples/grpc-client) to generate certs and add them to [docker-compose.yaml](docker-compose.yaml) and [dex.config.docker.yaml](conf/dex.config.docker.yaml)
 
