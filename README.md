@@ -28,6 +28,8 @@
 Dexus Vault is utility designed to synchronize Dex client configurations with secrets stored in Hashicorp Vault.
 This tool simplifies the management of Dex clients by automating the process of keeping them in sync with Vault secrets.
 
+> As of the current release, dexus_vault is compatible only with version 2 of the Vault secrets engine.
+
 ### How it works
 
 When you execute `dexus-vault`, it establishes a connection to the specified Vault using the `hvac` library and retrieves secrets from the provided path. Following this, `dexus-vault` connects to Dex IdP via gRPC and creates or updates clients.
@@ -96,8 +98,8 @@ Currently dexus-vault support only Environment variables.
 | variable | required  | default | description |
 |:---------:|:---------:|:-------:|:------------:|
 | VAULT_CLIENTS_PATH | yes | - | path in vault where clients could be found |
+| VAULT_MOUNT_POINT | yes | - | vault [mount point](https://developer.hashicorp.com/vault/tutorials/enterprise/namespace-structure#understand-vault-s-mount-points) by default vault client uses "secret" |
 | VAULT_ADDR | - | <http://127.0.0.1:8200> | vault address |
-| VAULT_MOUNT_POINT | - | - | vault [mount point](https://developer.hashicorp.com/vault/tutorials/enterprise/namespace-structure#understand-vault-s-mount-points) by default vault client uses "secret" |
 | VAULT_TOKEN | - | - | used to auth to Vault via token |
 | VAULT_CERT | - | - | Vault client certificate path |
 | VAULT_CERT_KEY | - | - | Vault client certificate key path |
