@@ -70,11 +70,12 @@ vault_enable_kv() {
 }
 
 vault_create_secrets() {
-    # ls -dq client*.json | wc -l
-    exec_vault vault kv put kv/dex/client1 @templ/client1.json > /dev/null
-    exec_vault vault kv put kv/dex/client2 @templ/client2.json > /dev/null
-    exec_vault vault kv put kv/dex/client3 @templ/client3.json > /dev/null
-    exec_vault vault kv put kv/dex/client4 @templ/client4.json > /dev/null
+    local clients=$(ls -dq templ/client*.json | wc -l)
+
+    for cl in $(seq 1 $clients)
+    do
+        exec_vault vault kv put kv/dex/client${cl} @templ/client${cl}.json > /dev/null
+    done
 }
 
 vault_create_test() {
@@ -82,13 +83,16 @@ vault_create_test() {
     vault_create_secrets
     exec_vault vault policy write policy1 templ/policy1.hcl > /dev/null
     echo "\033[0;32m______ Use this token to access client secrets in Vault _______\033[0m"
-    exec_vault vault token create -policy=policy1
+    local response=$(exec_vault vault token create -policy=policy1)
+    # little trick with whitespace when grep, to get only token
+    app_token=$(echo "$response" | grep 'token ' | awk '{print $NF}')
+    echo "export VAULT_TOKEN=$app_token"
 }
 
 generate_dotenv() {
     echo "DEX_GRPC_URL=dexidp:5557" > .env
     echo "VAULT_ADDR=http://vault:8200" >> .env
-    echo "VAULT_TOKEN=$initial_root_token" >> .env
+    echo "VAULT_TOKEN=$app_token" >> .env
     echo "VAULT_CLIENTS_PATH=/dex" >> .env
     echo "VAULT_MOUNT_POINT=kv" >> .env
 }
