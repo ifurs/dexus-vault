@@ -72,7 +72,7 @@ vault_enable_kv() {
 vault_create_secrets() {
     local clients=$(ls -dq templ/client*.json | wc -l)
 
-    for cl in {1..${clients}}
+    for cl in $(seq 1 $clients)
     do
         exec_vault vault kv put kv/dex/client${cl} @templ/client${cl}.json > /dev/null
     done
