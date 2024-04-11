@@ -114,16 +114,14 @@ class DexClient:
             response = MessageToDict(DexStub(self.channel).CreateClient(request))
             if response.get("client", None) is not None:
                 client_id = response.get("client").get("id")
-                client_create_metric.labels(client_id=client_id, status="ok").inc()
+                client_create_metric.labels(status="ok").inc()
                 logger.info(f"Created new Dex client '{client_id}'")
                 return client_id
             else:
                 logger.warning(f"RESPONSE FROM GRPC: {response}")
 
         except Exception as error:
-            client_create_metric.labels(
-                client_id=client.get("id"), status="failed"
-            ).inc()
+            client_create_metric.labels(status="failed").inc()
             logger.error(f"Failed to create client {client.get('id')}")
             logger.error(f"RESPONSE FROM GRPC: {error}")
 
@@ -140,13 +138,13 @@ class DexClient:
             response = MessageToDict(DexStub(self.channel).DeleteClient(dex_request))
 
             if response.get("notFound", None) is not None:
-                client_delete_metric.labels(client_id=client_id, status="failed").inc()
+                client_delete_metric.labels(status="failed").inc()
                 logger.warning(f"Client '{client_id}' not found")
             else:
-                client_create_metric.labels(client_id=client_id, status="ok").inc()
+                client_create_metric.labels(status="ok").inc()
                 logger.info(f"client {client_id} was deleted")
         except Exception as error:
-            client_delete_metric.labels(client_id=client_id, status="failed").inc()
+            client_delete_metric.labels(status="failed").inc()
             logger.error(f"Failed to delete client {client_id}")
             logger.error(f"RESPONSE FROM GRPC: {error}")
 
