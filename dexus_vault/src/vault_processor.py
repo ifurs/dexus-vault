@@ -160,12 +160,12 @@ class VaultClient:
 
             if config is not None:
                 _client_config.append(config)
-                vault_client_secret.labels(secret_name=secret, status="ok").inc()
+                vault_client_secret.labels(status="ok").inc()
 
             else:
                 logger.warning(
                     f"Secret '{secret}' in Vault, missing 'secret' key, or have incorrect structure"
                 )
-                vault_client_secret.labels(secret_name=secret, status="failed").inc()
+                vault_client_secret.labels(status="failed").inc()
 
         return _client_config
