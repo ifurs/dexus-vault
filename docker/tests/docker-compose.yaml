@@ -9,6 +9,8 @@ services:
     ports:
       - "5556:5556"
       - "5557:5557"
+    networks:
+      - dexus_vault
 
   vault:
     image: hashicorp/vault:1.12.7
@@ -23,3 +25,9 @@ services:
     cap_add:
       - IPC_LOCK
     command: server -config=/vault/config.d/vault.hcl
+    networks:
+      - dexus_vault
+
+networks:
+  dexus_vault:
+   name: dexus_vault

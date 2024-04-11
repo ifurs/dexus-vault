@@ -1,3 +1,10 @@
+#!/bin/bash
+
+# command "up" or "down"
+arg1=$1
+# argument "dexus_vault" or empty
+arg2=$2
+
 # TODO: remove export and exec in alias
 alias exec_vault=`docker exec -ti vault`
 export VAULT_ADDR="http://127.0.0.1:8200"
@@ -31,6 +38,10 @@ start_docker_compose() {
 }
 
 function down_docker_compose() {
+    if [ "$arg2" = "dexus_vault" ]; then
+        docker-compose -f docker-compose.dexus_vault.yml down
+        rm .env
+    fi
     docker-compose down
     echo '\033[0;32m docker-compose down \033[0m'
 }
@@ -59,12 +70,12 @@ vault_enable_kv() {
 }
 
 vault_create_secrets() {
+    # ls -dq client*.json | wc -l
     exec_vault vault kv put kv/dex/client1 @templ/client1.json > /dev/null
     exec_vault vault kv put kv/dex/client2 @templ/client2.json > /dev/null
-    exec_vault vault kv put kv/dex/client2 @templ/client3.json > /dev/null
-    exec_vault vault kv put kv/dex/client2 @templ/client4.json > /dev/null
+    exec_vault vault kv put kv/dex/client3 @templ/client3.json > /dev/null
+    exec_vault vault kv put kv/dex/client4 @templ/client4.json > /dev/null
 }
-
 
 vault_create_test() {
     vault_enable_kv
@@ -74,13 +85,37 @@ vault_create_test() {
     exec_vault vault token create -policy=policy1
 }
 
+generate_dotenv() {
+    echo "DEX_GRPC_URL=dexidp:5557" > .env
+    echo "VAULT_ADDR=http://vault:8200" >> .env
+    echo "VAULT_TOKEN=$initial_root_token" >> .env
+    echo "VAULT_CLIENTS_PATH=/dex" >> .env
+    echo "VAULT_MOUNT_POINT=kv" >> .env
+}
+
+run_dexus_vault() {
+    generate_dotenv
+    docker-compose -f docker-compose.dexus_vault.yml up -d
+}
+
 init_all() {
     start_docker_compose
     vault_init
     vault_create_test
+    if [ "$arg2" = "dexus_vault" ]; then
+        echo "Starting dexus_vault..."
+        run_dexus_vault
+    fi
 }
 
-init_all
-
-
 trap down_docker_compose SIGINT
+
+if [ "$arg1" = "down" ]; then
+    down_docker_compose
+    exit 0
+fi
+
+if [ "$arg1" = "up" ]; then
+    init_all
+    exit 0
+fi

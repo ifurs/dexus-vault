@@ -1,0 +1,16 @@
+# TODO: make it like extension for main docker-compose.yml
+version: "3.8"
+services:
+
+  dexus_vault:
+    image: ifurs/dexus-vault:latest
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    networks:
+      - dexus_vault
+
+networks:
+  dexus_vault:
+    external: true
