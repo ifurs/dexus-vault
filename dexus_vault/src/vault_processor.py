@@ -131,7 +131,9 @@ class VaultClient:
         """
         _client_config = []
         for secret in self.vault_list_secrets():
-            config = normalize_config(self.vault_read_secret(secret_path=secret), secret)
+            config = normalize_config(
+                self.vault_read_secret(secret_path=secret), secret
+            )
             if config is not None:
                 _client_config.append(config)
                 vault_client_secret.labels(secret_name=secret, status="ok").inc()
