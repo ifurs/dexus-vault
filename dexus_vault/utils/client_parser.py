@@ -47,12 +47,14 @@ def _camel_case_to_underscore(config: dict) -> dict:
         for key, value in config.items()
     }
 
-
-def normalize_config(client_config: dict) -> dict | None:
+def normalize_config(client_config: dict, vault_secret: str | None = None) -> dict | None:
     """
     Normalize Dex config to one standard.
-    I know, re is better, but I don't like it
     """
+    if "id" not in client_config and vault_secret is not None:
+        # Set Vault secret name as client Id
+        client_config["id"] = vault_secret
+
     if {"id", "secret"}.issubset(client_config.keys()):
         config = _camel_case_to_underscore(client_config)
         return _fill_missing_keys(config)

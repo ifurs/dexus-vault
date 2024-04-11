@@ -131,13 +131,13 @@ class VaultClient:
         """
         _client_config = []
         for secret in self.vault_list_secrets():
-            config = normalize_config(self.vault_read_secret(secret_path=secret))
+            config = normalize_config(self.vault_read_secret(secret_path=secret), secret)
             if config is not None:
                 _client_config.append(config)
                 vault_client_secret.labels(secret_name=secret, status="ok").inc()
             else:
                 logger.warning(
-                    f"Secret '{secret}' in Vault, missing 'id' and 'secret' keys, or have incorrect structure"
+                    f"Secret '{secret}' in Vault, missing 'secret' key, or have incorrect structure"
                 )
                 vault_client_secret.labels(secret_name=secret, status="failed").inc()
         return _client_config
