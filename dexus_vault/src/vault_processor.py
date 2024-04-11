@@ -43,20 +43,20 @@ class VaultClient:
 
     def _check_if_vault_auth(self, client: object, auth_method: str) -> None:
         """
-        Function validates if we sucessfuly authentificated to Vault
+        Function validates if we successfully authenticated to Vault
         """
         if client.is_authenticated():
             logger.debug(
-                f"Authentificated to Vault {self.config['VAULT_ADDR']} via {auth_method} auth method"
+                f"Authenticated to Vault {self.config['VAULT_ADDR']} via {auth_method} auth method"
             )
         else:
             raise RuntimeError(
-                f"Failed to authentificate to Vault {self.config['VAULT_ADDR']} via {auth_method} auth method "
+                f"Failed to authenticate to Vault {self.config['VAULT_ADDR']} via {auth_method} auth method "
             )
 
     def login_to_client(self) -> object:
         """
-        Define auth method for Vault and authentificate
+        Define auth method for Vault and authenticate
         """
         client = hvac.Client(url=self.config["VAULT_ADDR"])
         self._check_vault_status(client)
