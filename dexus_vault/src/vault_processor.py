@@ -21,6 +21,7 @@ class VaultClient:
         """
         Function validates if Vault is up and running
         """
+
         for _ in range(self.config["VAULT_MAX_RETRIES"]):
             try:
                 response = client.sys.read_health_status(method="GET")
@@ -45,10 +46,12 @@ class VaultClient:
         """
         Function validates if we successfully authenticated to Vault
         """
+
         if client.is_authenticated():
             logger.debug(
                 f"Authenticated to Vault {self.config['VAULT_ADDR']} via {auth_method} auth method"
             )
+
         else:
             raise RuntimeError(
                 f"Failed to authenticate to Vault {self.config['VAULT_ADDR']} via {auth_method} auth method "
@@ -109,35 +112,60 @@ class VaultClient:
         """
         List secrets from Vault by path
         """
-        response = self.client.secrets.kv.v2.list_secrets(
-            self.config["VAULT_CLIENTS_PATH"],
-            mount_point=self.config["VAULT_MOUNT_POINT"],
-        )
+
+        if self.config["VAULT_ENGINE"] == "v1":
+            response = self.client.secrets.kv.v1.list_secrets(
+                self.config["VAULT_CLIENTS_PATH"],
+                mount_point=self.config["VAULT_MOUNT_POINT"],
+            )
+
+        elif self.config["VAULT_ENGINE"] == "v2":
+            response = self.client.secrets.kv.v2.list_secrets(
+                self.config["VAULT_CLIENTS_PATH"],
+                mount_point=self.config["VAULT_MOUNT_POINT"],
+            )
+
         return response["data"]["keys"]
 
     def vault_read_secret(self, secret_path: str):
         """
         Read specified secret from Vault
         """
-        response = self.client.secrets.kv.read_secret_version(
-            path=f"{self.config['VAULT_CLIENTS_PATH']}/{secret_path}",
-            mount_point=self.config["VAULT_MOUNT_POINT"],
-        )
-        return response["data"]["data"]
+
+        if self.config["VAULT_ENGINE"] == "v1":
+            response = self.client.secrets.kv.v1.read_secret(
+                path=f"{self.config['VAULT_CLIENTS_PATH']}/{secret_path}",
+                mount_point=self.config["VAULT_MOUNT_POINT"],
+            )
+            return response["data"]
+
+        elif self.config["VAULT_ENGINE"] == "v2":
+            response = self.client.secrets.kv.read_secret_version(
+                path=f"{self.config['VAULT_CLIENTS_PATH']}/{secret_path}",
+                mount_point=self.config["VAULT_MOUNT_POINT"],
+            )
+            return response["data"]["data"]
+        return None
 
     def vault_read_secrets(self) -> list:
         """
         Combine list_secrets with read_secret
         """
         _client_config = []
+
         for secret in self.vault_list_secrets():
-            config = normalize_config(self.vault_read_secret(secret_path=secret))
+            config = normalize_config(
+                self.vault_read_secret(secret_path=secret), secret
+            )
+
             if config is not None:
                 _client_config.append(config)
-                vault_client_secret.labels(secret_name=secret, status="ok").inc()
+                vault_client_secret.labels(status="ok").inc()
+
             else:
                 logger.warning(
-                    f"Secret '{secret}' in Vault, missing 'id' and 'secret' keys, or have incorrect structure"
+                    f"Secret '{secret}' in Vault, missing 'secret' key, or have incorrect structure"
                 )
-                vault_client_secret.labels(secret_name=secret, status="failed").inc()
+                vault_client_secret.labels(status="failed").inc()
+
         return _client_config

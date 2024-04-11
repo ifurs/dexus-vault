@@ -10,6 +10,7 @@ services:
       - "8000:8000"
     networks:
       - dexus_vault
+    platform: linux/amd64
 
 networks:
   dexus_vault:

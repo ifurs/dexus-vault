@@ -99,6 +99,7 @@ Currently dexus-vault support only Environment variables.
 |:---------:|:---------:|:-------:|:------------:|
 | VAULT_CLIENTS_PATH | yes | - | path in vault where clients could be found |
 | VAULT_MOUNT_POINT | yes | - | vault [mount point](https://developer.hashicorp.com/vault/tutorials/enterprise/namespace-structure#understand-vault-s-mount-points) by default vault client uses "secret" |
+| VAULT_ENGINE | - | v2 | KV engine version, supported values v1 and v2 |
 | VAULT_ADDR | - | <http://127.0.0.1:8200> | vault address |
 | VAULT_TOKEN | - | - | used to auth to Vault via token |
 | VAULT_CERT | - | - | Vault client certificate path |
@@ -131,7 +132,7 @@ There are several authentication methods available:
 For now "dexus-vault" publish simplified metrics, like this:
 
 ```bash
-client_create{client_id="my-first-dex-client", status="ok"} 1.0
+client_create{status="ok"} 1.0
 ```
 
 for "status" could be values "ok" and "failed"
@@ -154,7 +155,7 @@ This example demonstrates all the parameters available for a client, which align
 }
 ```
 
-In the Vault configuration, `id` and `secret` are mandatory fields. The `public` field defaults to `False` at the `dexus_vault` level. If you wish to enable `public`, ensure that it is set as a boolean type in your Vault implementation, not as a string.
+In the Vault configuration, `secret` are mandatory field same as `id`, but if you don't specify id, dexus-vault will use secret name for client id. The `public` field defaults to `False` at the `dexus_vault` level. If you wish to enable `public`, ensure that it is set as a boolean type in your Vault implementation, not as a string.
 
 For defining lists in `redirect_uris` and `trusted_peers`, there are two methods:
 
