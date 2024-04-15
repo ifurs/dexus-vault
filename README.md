@@ -28,8 +28,6 @@
 Dexus Vault is utility designed to synchronize Dex client configurations with secrets stored in Hashicorp Vault.
 This tool simplifies the management of Dex clients by automating the process of keeping them in sync with Vault secrets.
 
-> As of the current release, dexus_vault is compatible only with version 2 of the Vault secrets engine.
-
 ### How it works
 
 When you execute `dexus-vault`, it establishes a connection to the specified Vault using the `hvac` library and retrieves secrets from the provided path. Following this, `dexus-vault` connects to Dex IdP via gRPC and creates or updates clients.
@@ -98,7 +96,7 @@ Currently dexus-vault support only Environment variables.
 | variable | required  | default | description |
 |:---------:|:---------:|:-------:|:------------:|
 | VAULT_CLIENTS_PATH | yes | - | path in vault where clients could be found |
-| VAULT_MOUNT_POINT | yes | - | vault [mount point](https://developer.hashicorp.com/vault/tutorials/enterprise/namespace-structure#understand-vault-s-mount-points) by default vault client uses "secret" |
+| VAULT_MOUNT_POINT | yes | - | vault [mount point](https://developer.hashicorp.com/vault/tutorials/enterprise/namespace-structure#understand-vault-s-mount-points) |
 | VAULT_ENGINE | - | v2 | KV engine version, supported values v1 and v2 |
 | VAULT_ADDR | - | <http://127.0.0.1:8200> | vault address |
 | VAULT_TOKEN | - | - | used to auth to Vault via token |
@@ -107,10 +105,12 @@ Currently dexus-vault support only Environment variables.
 | VAULT_CERT_CA | - | - | Vault certificate authority path or bool, `false` - do not validate, `true` - validate with internal truststore |
 | VAULT_LDAP_USERNAME | - | - | LDAP username used to auth to Vault |
 | VAULT_LDAP_PASSWORD | - | - | LDAP password used to auth to Vault |
-| VAULT_APPROLE | - | - | bool value, used to identify to use APPROLE auth |
 | VAULT_APPROLE_ROLE_ID | - | - | Vault approle role id |
 | VAULT_APPROLE_SECRET_ID | - | - | Vault approle secret id |
-| VAULT_APPROLE_PATH | - | - | Vault approle path, use it if agent mount approle file in other than default directory |
+| VAULT_APPROLE_SECRET_PATH | - | - | Vault approle secret path used to gain secret created by agent |
+| VAULT_KUBERNETES_ROLE | - | - | Vault role, used for kube app |
+| VAULT_KUBERNETES_JWT_PATH | - | /var/run/secrets/kubernetes.io/serviceaccount/token | Path to jwt mounted by Vault agent |
+| VAULT_KUBERNETES_MOUNT_POINT | - | kubernetes | Mount point for role "/auth/{mount_point}/role" |
 | VAULT_MAX_RETRIES | - | 20 | How many retries need to mark Vault unreachable |
 | VAULT_RETRY_WAIT | - | 3 | How many seconds need to wait before next retry |
 
