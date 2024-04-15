@@ -107,7 +107,7 @@ Currently dexus-vault support only Environment variables.
 | VAULT_LDAP_PASSWORD | - | - | LDAP password used to auth to Vault |
 | VAULT_APPROLE_ROLE_ID | - | - | Vault approle role id |
 | VAULT_APPROLE_SECRET_ID | - | - | Vault approle secret id |
-| VAULT_APPROLE_SECRET_PATH | - | - | Vault approle secret pathm used to gain secret created by agent |
+| VAULT_APPROLE_SECRET_PATH | - | - | Vault approle secret path used to gain secret created by agent |
 | VAULT_KUBERNETES_ROLE | - | - | Vault role, used for kube app |
 | VAULT_KUBERNETES_JWT_PATH | - | /var/run/secrets/kubernetes.io/serviceaccount/token | Path to jwt mounted by Vault agent |
 | VAULT_KUBERNETES_MOUNT_POINT | - | kubernetes | Mount point for role "/auth/{mount_point}/role" |
