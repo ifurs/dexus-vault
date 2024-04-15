@@ -105,10 +105,12 @@ Currently dexus-vault support only Environment variables.
 | VAULT_CERT_CA | - | - | Vault certificate authority path or bool, `false` - do not validate, `true` - validate with internal truststore |
 | VAULT_LDAP_USERNAME | - | - | LDAP username used to auth to Vault |
 | VAULT_LDAP_PASSWORD | - | - | LDAP password used to auth to Vault |
-| VAULT_APPROLE | - | - | bool value, used to identify to use APPROLE auth |
 | VAULT_APPROLE_ROLE_ID | - | - | Vault approle role id |
 | VAULT_APPROLE_SECRET_ID | - | - | Vault approle secret id |
-| VAULT_APPROLE_PATH | - | - | Vault approle path, use it if agent mount approle file in other than default directory |
+| VAULT_APPROLE_SECRET_PATH | - | - | Vault approle secret pathm used to gain secret created by agent |
+| VAULT_KUBERNETES_ROLE | - | - | Vault role, used for kube app |
+| VAULT_KUBERNETES_JWT_PATH | - | /var/run/secrets/kubernetes.io/serviceaccount/token | Path to jwt mounted by Vault agent |
+| VAULT_KUBERNETES_MOUNT_POINT | - | kubernetes | Mount point for role "/auth/{mount_point}/role" |
 | VAULT_MAX_RETRIES | - | 20 | How many retries need to mark Vault unreachable |
 | VAULT_RETRY_WAIT | - | 3 | How many seconds need to wait before next retry |
 
