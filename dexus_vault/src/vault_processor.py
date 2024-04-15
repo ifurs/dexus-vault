@@ -1,6 +1,8 @@
 import sys
 import time
 import requests
+
+from hvac.api.auth_methods import Kubernetes
 import hvac
 
 from dexus_vault.utils.client_parser import normalize_config
@@ -64,26 +66,33 @@ class VaultClient:
         client = hvac.Client(url=self.config["VAULT_ADDR"])
         self._check_vault_status(client)
 
-        if self.config["VAULT_APPROLE"] is not None:
+        if self.config["VAULT_APPROLE_ROLE_ID"] is not None:
             auth_method = "approle"
-            client.sys.enable_auth_method(
-                method_type=self.auth_method,
-            )
 
-            if self.config["VAULT_APPROLE_ROLE_ID"]:
+            if self.config["VAULT_APPROLE_SECRET_PATH"] is not None:
+                client.auth.approle.login_by_approle_path(
+                    role_id=self.config["VAULT_APPROLE_ROLE_ID"],
+                    secret_id=self.config["VAULT_APPROLE_SECRET_PATH"],
+                )
+            else:
                 client.auth.approle.login(
                     role_id=self.config["VAULT_APPROLE_ROLE_ID"],
                     secret_id=self.config["VAULT_APPROLE_SECRET_ID"],
                 )
 
-            elif self.config["VAULT_APPROLE_PATH"]:
-                client.sys.enable_auth_method(
-                    method_type=self.auth_method,
-                    path=self.config["VAULT_APPROLE_PATH"],
+        elif self.config["VAULT_KUBERNETES_ROLE"] is not None:
+            # POST /auth/{mount_point}/login
+            auth_method = "kubernetes"
+
+            with open(self.config["VAULT_KUBERNETES_JWT_PATH"], "r") as jwt:
+                Kubernetes(client.adapter).login(
+                    role=self.config["VAULT_KUBERNETES_ROLE"],
+                    jwt=jwt,
+                    mount_point=self.config["VAULT_KUBERNETES_MOUNT_POINT"],
                 )
 
         elif self.config["VAULT_LDAP_USERNAME"] is not None:
-            auth_method = "LDAP"
+            auth_method = "ldap"
             client.auth.ldap.login(
                 username=self.config["VAULT_LDAP_USERNAME"],
                 password=self.config["VAULT_LDAP_PASSWORD"],
@@ -103,7 +112,7 @@ class VaultClient:
             client.token = self.config["VAULT_TOKEN"]
 
         else:
-            raise KeyError(f"Vault auth method is not specified!")
+            raise KeyError(f"Vault auth method is not specified, or not supported")
 
         self._check_if_vault_auth(client, auth_method)
         return client

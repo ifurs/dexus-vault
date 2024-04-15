@@ -16,6 +16,17 @@ def _get_config_value(
     return check_var_type(env_value, target_type)
 
 
+def get_metrics_config() -> Dict[str, Any]:
+    """
+    Get the configuration as a dictionary, with type-checked values.
+    """
+    return {
+        "METRICS_ENABLE": _get_config_value("METRICS_ENABLE", bool, True),
+        "METRICS_PORT": _get_config_value("METRICS_PORT", int, 8000),
+        "INTERNAL_METRICS": _get_config_value("INTERNAL_METRICS", bool, False),
+    }
+
+
 def get_dex_config() -> Dict[str, Any]:
     """
     Get the configuration as a dictionary, with type-checked values.
@@ -31,17 +42,6 @@ def get_dex_config() -> Dict[str, Any]:
     return config
 
 
-def get_metrics_config() -> Dict[str, Any]:
-    """
-    Get the configuration as a dictionary, with type-checked values.
-    """
-    return {
-        "METRICS_ENABLE": _get_config_value("METRICS_ENABLE", bool, True),
-        "METRICS_PORT": _get_config_value("METRICS_PORT", int, 8000),
-        "INTERNAL_METRICS": _get_config_value("INTERNAL_METRICS", bool, False),
-    }
-
-
 def get_vault_config() -> Dict[str, Any]:
     """
     Get the configuration as a dictionary, with type-checked values.
@@ -49,10 +49,20 @@ def get_vault_config() -> Dict[str, Any]:
     # TODO: Check if it really need assignment
     config = {
         "VAULT_ADDR": _get_config_value("VAULT_ADDR", str, "http://127.0.0.1:8200"),
-        "VAULT_APPROLE": _get_config_value("VAULT_APPROLE", str),
         "VAULT_APPROLE_ROLE_ID": _get_config_value("VAULT_APPROLE_ROLE_ID", str),
         "VAULT_APPROLE_SECRET_ID": _get_config_value("VAULT_APPROLE_SECRET_ID", str),
-        "VAULT_APPROLE_PATH": _get_config_value("VAULT_APPROLE_PATH", str),
+        "VAULT_APPROLE_SECRET_PATH": load_file(
+            _get_config_value("VAULT_APPROLE_SECRET_PATH", str)
+        ),
+        "VAULT_KUBERNETES_ROLE": _get_config_value("VAULT_KUBERNETES_ROLE", str),
+        "VAULT_KUBERNETES_JWT_PATH": _get_config_value(
+            "VAULT_KUBERNETES_JWT_PATH",
+            str,
+            "/var/run/secrets/kubernetes.io/serviceaccount/token",
+        ),
+        "VAULT_KUBERNETES_MOUNT_POINT": _get_config_value(
+            "VAULT_KUBERNETES_MOUNT_POINT", str, "kubernetes"
+        ),
         "VAULT_TOKEN": _get_config_value("VAULT_TOKEN", str),
         "VAULT_CERT": _get_config_value("VAULT_CERT", str),
         "VAULT_CERT_KEY": _get_config_value("VAULT_CERT_KEY", str),
