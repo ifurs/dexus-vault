@@ -67,7 +67,7 @@ class VaultClient:
         if self.config["VAULT_APPROLE"] is not None:
             auth_method = "approle"
             client.sys.enable_auth_method(
-                method_type=self.auth_method,
+                method_type=auth_method,
             )
 
             if self.config["VAULT_APPROLE_ROLE_ID"]:
@@ -78,7 +78,7 @@ class VaultClient:
 
             elif self.config["VAULT_APPROLE_PATH"]:
                 client.sys.enable_auth_method(
-                    method_type=self.auth_method,
+                    method_type=auth_method,
                     path=self.config["VAULT_APPROLE_PATH"],
                 )
 
