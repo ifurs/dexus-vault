@@ -85,10 +85,11 @@ class VaultClient:
             auth_method = "kubernetes"
 
             with open(self.config["VAULT_KUBERNETES_JWT_PATH"], "r") as jwt:
+                # it is required to have params order mp, role, jwt
                 Kubernetes(client.adapter).login(
-                    role=self.config["VAULT_KUBERNETES_ROLE"],
-                    jwt=jwt,
                     mount_point=self.config["VAULT_KUBERNETES_MOUNT_POINT"],
+                    role=self.config["VAULT_KUBERNETES_ROLE"],
+                    jwt=jwt.read(),
                 )
 
         elif self.config["VAULT_LDAP_USERNAME"] is not None:
