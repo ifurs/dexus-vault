@@ -78,7 +78,7 @@ class DexClient:
 
     def get_dex_client(self, client_id: str) -> dict | None:
         """
-        Call Get Dex Client with by client id
+        Get Dex Client by id
         """
         dex_request = pb2.GetClientReq()
         dex_request.id = client_id
@@ -90,11 +90,11 @@ class DexClient:
         except grpc.RpcError as rpc_error:
             if rpc_error.code() == grpc.StatusCode.UNKNOWN:
                 logger.debug(
-                    f"RESPONSE FROM GRPC: {rpc_error.details()}, client {client_id}"
+                    f"Dex gRPC response: {rpc_error.details()}, client {client_id}"
                 )
             else:
                 logger.warning(
-                    f"GRPC CALL CODE: {rpc_error.code()} with details {rpc_error.details()}"
+                    f"Dex gRPC error code: {rpc_error.code()} with details {rpc_error.details()}"
                 )
 
     def create_dex_client(self, client: dict) -> dict | None:
@@ -117,13 +117,17 @@ class DexClient:
                 client_create_metric.labels(status="ok").inc()
                 logger.info(f"Created new Dex client '{client_id}'")
                 return client_id
+            elif response.get("AlreadyExists", None) is not None:
+                logger.info(
+                    f"Client {client.get('id')} already exists, check Vault configs for duplicates"
+                )
             else:
-                logger.warning(f"RESPONSE FROM GRPC: {response}")
+                logger.warning(f"Dex gRPC response: {response}")
 
         except Exception as error:
             client_create_metric.labels(status="failed").inc()
             logger.error(f"Failed to create client {client.get('id')}")
-            logger.error(f"RESPONSE FROM GRPC: {error}")
+            logger.error(f"Dex gRPC response: {error}")
 
     def delete_dex_client(self, client_id: str) -> None:
         """
@@ -146,7 +150,7 @@ class DexClient:
         except Exception as error:
             client_delete_metric.labels(status="failed").inc()
             logger.error(f"Failed to delete client {client_id}")
-            logger.error(f"RESPONSE FROM GRPC: {error}")
+            logger.error(f"Dex gRPC response: {error}")
 
     def __del__(self):
         """

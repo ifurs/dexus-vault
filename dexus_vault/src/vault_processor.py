@@ -12,7 +12,7 @@ from dexus_vault.utils.metrics import vault_client_secret
 
 class VaultClient:
     """
-    This Class represents methods we used inside dexus_vault, nothing new, just wrap hvac
+    This Class represents methods used inside dexus_vault, nothing new, just wrap hvac
     """
 
     def __init__(self, config: dict):
@@ -134,7 +134,6 @@ class VaultClient:
                 self.config["VAULT_CLIENTS_PATH"],
                 mount_point=self.config["VAULT_MOUNT_POINT"],
             )
-
         return response["data"]["keys"]
 
     def vault_read_secret(self, secret_path: str):
