@@ -33,7 +33,10 @@ def sync_dex_clients(dex_client: object, vault_clients: list) -> set:
     """
     Synchronize Dex clients with Vault clients.
     """
+
+    # TODO: make state in memory and compare with it
     logger.debug(f"Target clients {[x.get('id') for x in vault_clients]}")
+
     for client in vault_clients:
         dex_get_client = dex_client.get_dex_client(client_id=client.get("id"))
 
