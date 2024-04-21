@@ -1,3 +1,5 @@
+from dexus_vault.utils.config import ClientModel
+
 # General Dex GRPC Message for Client
 ## Need to be refactored to use the same logic as config.py
 _config_keys = [
