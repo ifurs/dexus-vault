@@ -125,6 +125,7 @@ class DexClient:
                 client_create_metric.labels(status="ok").inc()
                 logger.info(f"Created new Dex client '{client_id}'")
                 return client_id
+
             elif response.get("alreadyExists", None) is not None:
                 logger.info(
                     f"Client {client.id} already exists, check Vault configs for duplicates"
@@ -152,9 +153,11 @@ class DexClient:
             if response.get("notFound", None) is not None:
                 client_delete_metric.labels(status="failed").inc()
                 logger.warning(f"Client '{client_id}' not found")
+
             else:
                 client_create_metric.labels(status="ok").inc()
                 logger.info(f"client {client_id} was deleted")
+
         except Exception as error:
             client_delete_metric.labels(status="failed").inc()
             logger.error(f"Failed to delete client {client_id}")
