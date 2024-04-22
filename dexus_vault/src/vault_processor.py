@@ -19,12 +19,13 @@ class VaultClient:
 
     def _check_vault_status(self, client: object) -> None:
         """
-        Function validates if Vault is up and running
+        Function validates if Vault is up and initialized
         """
-
+        # TODO: research more clean way to check if Vault is initialized
         for _ in range(self.config.vault_max_retries):
             try:
                 response = client.sys.read_health_status(method="GET")
+                # check response type, in some cases it is not requests.Response
                 if isinstance(response, requests.Response):
                     status = response.json()
                 else:
@@ -46,12 +47,10 @@ class VaultClient:
         """
         Function validates if we successfully authenticated to Vault
         """
-
         if client.is_authenticated():
             logger.debug(
                 f"Authenticated to Vault {self.config.vault_addr} via {auth_method} auth method"
             )
-
         else:
             raise RuntimeError(
                 f"Failed to authenticate to Vault {self.config.vault_addr} via {auth_method} auth method "
@@ -132,19 +131,34 @@ class VaultClient:
         """
         List secrets from Vault by path
         """
+        try:
+            if self.config.vault_engine == "v1":
+                response = self.client.secrets.kv.v1.list_secrets(
+                    self.config.vault_clients_path,
+                    mount_point=self.config.vault_mount_point,
+                )
 
-        if self.config.vault_engine == "v1":
-            response = self.client.secrets.kv.v1.list_secrets(
-                self.config.vault_clients_path,
-                mount_point=self.config.vault_mount_point,
-            )
+            elif self.config.vault_engine == "v2":
+                response = self.client.secrets.kv.v2.list_secrets(
+                    self.config.vault_clients_path,
+                    mount_point=self.config.vault_mount_point,
+                )
+            return response["data"]["keys"]
 
-        elif self.config.vault_engine == "v2":
-            response = self.client.secrets.kv.v2.list_secrets(
-                self.config.vault_clients_path,
-                mount_point=self.config.vault_mount_point,
+        except hvac.exceptions.Forbidden as error:
+            logger.error(
+                f"Permissions denied for listing secrets by path {self.config.vault_clients_path}, hvac details: {error}"
             )
-        return response["data"]["keys"]
+            logger.info(
+                f"For Vault kv-v2 engine, make sure you have 'list' permission on 'metadata' path"
+            )
+            return []
+
+        except Exception as error:
+            logger.error(
+                f"Error listing secrets from Vault, via path {self.config.vault_clients_path}, more details: {error}"
+            )
+            return []
 
     def vault_read_secret(self, secret_path: str):
         """
@@ -165,6 +179,12 @@ class VaultClient:
                 )
                 return response["data"]["data"]
 
+        except hvac.exceptions.Forbidden as error:
+            logger.error(
+                f"Permissions denied for reading secret by path {self.config.vault_clients_path}/{secret_path}, hvac details: {error}"
+            )
+            return None
+
         except Exception as error:
             logger.error(f"Error reading secret {secret_path} from Vault: {error}")
             return None
@@ -178,14 +198,17 @@ class VaultClient:
         for secret in self.vault_list_secrets():
             config = self.vault_read_secret(secret_path=secret)
 
-            if config is not None:
+            if config is not None and config != {}:
+                # set Vault secret name as Dex client id if "id" is not set in Vault secret
                 if config.get("id", None) is None:
                     config["id"] = secret
                     logger.debug(f"Client id is set to secret name '{secret}'")
 
                 _client_config.append(config)
-
+            # to avoid empty secrets
             else:
-                logger.warning(f"Empty secret '{secret}' from Vault, skipping...")
+                logger.warning(
+                    f"Empty secret '{secret}' or not have access in Vault to read it, skipping..."
+                )
 
         return _client_config

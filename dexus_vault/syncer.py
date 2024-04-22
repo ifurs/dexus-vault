@@ -78,16 +78,13 @@ def run():
     Main function to run the Dex client and Vault client synchronization.
     """
     general_config = GeneralConfig()
-
     dex_client = DexClient(config=DexConfig())
     dex_client.dex_waiter()
-
     metrics_server()
 
     while True:
         dex_client = DexClient(config=DexConfig())
         vault_client = VaultClient(config=VaultConfig())
-
         client_configs = vault_client.vault_read_secrets()
 
         sync_dex_clients(dex_client, client_configs)
