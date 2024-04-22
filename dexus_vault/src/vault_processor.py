@@ -208,7 +208,7 @@ class VaultClient:
             # to avoid empty secrets
             else:
                 logger.warning(
-                    f"Empty secret '{secret}' or not have access in Vault to read it, skipping..."
+                    f"Empty secret '{secret}' or insufficient permissions in Vault to read it, skipping..."
                 )
 
         return _client_config

@@ -16,6 +16,17 @@ from dexus_vault.utils.config import (
 )
 
 
+state = {
+    "incorrect_secrets": 0,
+    "clients_created": 0,
+    "clients_deleted": 0,
+    "clients_updated": 0,
+    "clients_skipped": 0,
+    "clients_delete_failed": 0,
+    "clients_create_failed": 0,
+}
+
+
 def metrics_server():
     """
     Start the Prometheus metrics server.
@@ -45,6 +56,8 @@ def sync_dex_clients(dex_client: object, vault_clients: list) -> set:
                 f"Secret '{vault_client['id']}' in Vault, missing 'secret' or have incorrect structure"
             )
             logger.debug(f"ValidationError: {error}")
+            # just for example, we can add more complex logic here
+            # state["incorrect_secrets"] += 1
             continue
 
         dex_get_client = dex_client.get_dex_client(client_id=client.id)
@@ -57,11 +70,14 @@ def sync_dex_clients(dex_client: object, vault_clients: list) -> set:
                 logger.warning(
                     f"Client '{client.id}' returned from Dex have incorrect structure {error}"
                 )
+                # TODO: add metric for incorrect structure from Dex, TBD
                 continue
 
             if client.id == client_from_dex.id:
                 if client == client_from_dex:
                     logger.debug(f"Client '{client_from_dex.id}' already exist.")
+                    # just for example, we can add more complex logic here
+                    # state["clients_skipped"] += 1
                 else:
                     logger.info(
                         f"Detected changes in '{client_from_dex.id}' client configuration, will be recreated"

@@ -20,6 +20,11 @@ vault_client_secret_metric = Gauge(
 )
 # SYNC_TIME = Summary("sync_time_seconds", "Time spent on synchronization")
 
+# def metrics_router(response: dict) -> None:
+#     """
+#     Route the metrics to the correct metric.
+#     """
+
 
 def start_metrics_server(
     disable_internal_metrics: bool, start_server: bool, port: int
