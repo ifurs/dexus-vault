@@ -1,7 +1,8 @@
 import threading
 
-from dexus_vault.client import run
+from dexus_vault.syncer import run
 from dexus_vault.utils.logger import logger
+from dexus_vault.__version__ import __title__, __version__  # noqa: F401
 
 # Try to import dotenv, if it's installed
 try:
@@ -9,7 +10,7 @@ try:
 
     load_dotenv(find_dotenv())
 except ImportError:
-    logger.debug(f"if you want to use .env file, please install python-dotenv")
+    logger.debug(f"If you want to use .env file, please install python-dotenv")
 
 
 def main():
@@ -27,5 +28,5 @@ def main():
 
 
 if __name__ == "__main__":
-    logger.info("Starting dexus_vault...")
+    logger.info(f"Starting {__title__}, version {__version__}...")
     main()

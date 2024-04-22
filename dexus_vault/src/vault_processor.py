@@ -5,9 +5,7 @@ import requests
 from hvac.api.auth_methods import Kubernetes
 import hvac
 
-from dexus_vault.utils.client_parser import normalize_config
 from dexus_vault.utils.logger import logger
-from dexus_vault.utils.metrics import vault_client_secret
 
 
 class VaultClient:
@@ -24,7 +22,7 @@ class VaultClient:
         Function validates if Vault is up and running
         """
 
-        for _ in range(self.config["VAULT_MAX_RETRIES"]):
+        for _ in range(self.config.vault_max_retries):
             try:
                 response = client.sys.read_health_status(method="GET")
                 if isinstance(response, requests.Response):
@@ -32,16 +30,16 @@ class VaultClient:
                 else:
                     status = response
                 if status["initialized"]:
-                    logger.debug(f"Vault {self.config['VAULT_ADDR']} is initialized")
+                    logger.debug(f"Vault {self.config.vault_addr} is initialized")
                     return True
                 else:
                     logger.warning(
-                        f"Vault {self.config['VAULT_ADDR']} is not initialized {status}"
+                        f"Vault {self.config.vault_addr} is not initialized {status}"
                     )
             except requests.exceptions.ConnectionError:
-                logger.warning(f"Vault {self.config['VAULT_ADDR']} connection failed")
-            time.sleep(self.config["VAULT_RETRY_WAIT"])
-        logger.error(f"Vault {self.config['VAULT_ADDR']} unreachable, exiting...")
+                logger.warning(f"Vault {self.config.vault_addr} connection failed")
+            time.sleep(self.config.vault_addr)
+        logger.error(f"Vault {self.config.vault_addr} unreachable, exiting...")
         sys.exit(1)
 
     def _check_if_vault_auth(self, client: object, auth_method: str) -> None:
@@ -51,66 +49,78 @@ class VaultClient:
 
         if client.is_authenticated():
             logger.debug(
-                f"Authenticated to Vault {self.config['VAULT_ADDR']} via {auth_method} auth method"
+                f"Authenticated to Vault {self.config.vault_addr} via {auth_method} auth method"
             )
 
         else:
             raise RuntimeError(
-                f"Failed to authenticate to Vault {self.config['VAULT_ADDR']} via {auth_method} auth method "
+                f"Failed to authenticate to Vault {self.config.vault_addr} via {auth_method} auth method "
             )
 
     def login_to_client(self) -> object:
         """
         Define auth method for Vault and authenticate
         """
-        client = hvac.Client(url=self.config["VAULT_ADDR"])
+        client = hvac.Client(url=self.config.vault_addr)
         self._check_vault_status(client)
 
-        if self.config["VAULT_APPROLE_ROLE_ID"] is not None:
+        if self.config.vault_approle_role_id and self.config.vault_approle_secret_id:
             auth_method = "approle"
 
-            if self.config["VAULT_APPROLE_SECRET_PATH"] is not None:
-                client.auth.approle.login_by_approle_path(
-                    role_id=self.config["VAULT_APPROLE_ROLE_ID"],
-                    secret_id=self.config["VAULT_APPROLE_SECRET_PATH"],
-                )
+            if self.config.vault_approle_secret_path is not None:
+                with self.config.vault_approle_secret_path.open("r") as secret_id:
+                    client.auth.approle.login_by_approle_path(
+                        role_id=self.config.vault_approle_role_id,
+                        secret_id=secret_id.read(),
+                    )
             else:
                 client.auth.approle.login(
-                    role_id=self.config["VAULT_APPROLE_ROLE_ID"],
-                    secret_id=self.config["VAULT_APPROLE_SECRET_ID"],
+                    role_id=self.config.vault_approle_role_id,
+                    secret_id=self.config.vault_approle_secret_id,
                 )
 
-        elif self.config["VAULT_KUBERNETES_ROLE"] is not None:
+        elif self.config.vault_kubernetes_role is not None:
             # POST /auth/{mount_point}/login
             auth_method = "kubernetes"
 
-            with open(self.config["VAULT_KUBERNETES_JWT_PATH"], "r") as jwt:
+            with open(self.config.vault_kubernetes_jwt_path, "r") as jwt:
                 # it is required to have params order mp, role, jwt
                 Kubernetes(client.adapter).login(
-                    mount_point=self.config["VAULT_KUBERNETES_MOUNT_POINT"],
-                    role=self.config["VAULT_KUBERNETES_ROLE"],
+                    mount_point=self.config.vault_kubernetes_mount_point,
+                    role=self.config.vault_kubernetes_role,
                     jwt=jwt.read(),
                 )
 
-        elif self.config["VAULT_LDAP_USERNAME"] is not None:
+        elif self.config.vault_ldap_username and self.config.vault_ldap_password:
             auth_method = "ldap"
             client.auth.ldap.login(
-                username=self.config["VAULT_LDAP_USERNAME"],
-                password=self.config["VAULT_LDAP_PASSWORD"],
+                username=self.config.vault_ldap_username,
+                password=self.config.vault_ldap_password.get_secret_value(),
             )
 
-        elif self.config["VAULT_CERT"] is not None:
-            auth_method = "Client cert"
-            client = hvac.Client(
-                url=self.config["VAULT_ADDR"],
-                token=self.config["VAULT_TOKEN"],
-                cert=(self.config["VAULT_CERT"], self.config["VAULT_CERT_KEY"]),
-                verify=(self.config["VAULT_CERT_CA"]),
-            )
+        elif self.config.vault_cert and self.config.vault_cert_key:
+            auth_method = "cert"
+            if self.config.vault_cert_ca:
+                with open(self.config.vault_cert_ca, "r") as ca:
+                    client = hvac.Client(
+                        url=self.config.vault_addr,
+                        cert=(self.config.vault_cert, self.config.vault_cert_key),
+                        verify=ca,
+                    )
+            else:
+                client = hvac.Client(
+                    url=self.config.vault_addr,
+                    token=self.config.vault_token.get_secret_value(),
+                    cert=(self.config.vault_cert, self.config.vault_cert_key),
+                    verify=(self.config.vault_cert_ca),
+                )
+                logger.debug(
+                    f"Vault client auth method: {auth_method}, but CA verification is disabled"
+                )
 
-        elif self.config["VAULT_TOKEN"] is not None:
-            auth_method = "Vault token"
-            client.token = self.config["VAULT_TOKEN"]
+        elif self.config.vault_token is not None:
+            auth_method = "token"
+            client.token = self.config.vault_token.get_secret_value()
 
         else:
             raise KeyError(f"Vault auth method is not specified, or not supported")
@@ -123,16 +133,16 @@ class VaultClient:
         List secrets from Vault by path
         """
 
-        if self.config["VAULT_ENGINE"] == "v1":
+        if self.config.vault_engine == "v1":
             response = self.client.secrets.kv.v1.list_secrets(
-                self.config["VAULT_CLIENTS_PATH"],
-                mount_point=self.config["VAULT_MOUNT_POINT"],
+                self.config.vault_clients_path,
+                mount_point=self.config.vault_mount_point,
             )
 
-        elif self.config["VAULT_ENGINE"] == "v2":
+        elif self.config.vault_engine == "v2":
             response = self.client.secrets.kv.v2.list_secrets(
-                self.config["VAULT_CLIENTS_PATH"],
-                mount_point=self.config["VAULT_MOUNT_POINT"],
+                self.config.vault_clients_path,
+                mount_point=self.config.vault_mount_point,
             )
         return response["data"]["keys"]
 
@@ -140,21 +150,24 @@ class VaultClient:
         """
         Read specified secret from Vault
         """
+        try:
+            if self.config.vault_engine == "v1":
+                response = self.client.secrets.kv.v1.read_secret(
+                    path=f"{self.config.vault_clients_path}/{secret_path}",
+                    mount_point=self.config.vault_mount_point,
+                )
+                return response["data"]
 
-        if self.config["VAULT_ENGINE"] == "v1":
-            response = self.client.secrets.kv.v1.read_secret(
-                path=f"{self.config['VAULT_CLIENTS_PATH']}/{secret_path}",
-                mount_point=self.config["VAULT_MOUNT_POINT"],
-            )
-            return response["data"]
+            elif self.config.vault_engine == "v2":
+                response = self.client.secrets.kv.read_secret_version(
+                    path=f"{self.config.vault_clients_path}/{secret_path}",
+                    mount_point=self.config.vault_mount_point,
+                )
+                return response["data"]["data"]
 
-        elif self.config["VAULT_ENGINE"] == "v2":
-            response = self.client.secrets.kv.read_secret_version(
-                path=f"{self.config['VAULT_CLIENTS_PATH']}/{secret_path}",
-                mount_point=self.config["VAULT_MOUNT_POINT"],
-            )
-            return response["data"]["data"]
-        return None
+        except Exception as error:
+            logger.error(f"Error reading secret {secret_path} from Vault: {error}")
+            return None
 
     def vault_read_secrets(self) -> list:
         """
@@ -163,18 +176,16 @@ class VaultClient:
         _client_config = []
 
         for secret in self.vault_list_secrets():
-            config = normalize_config(
-                self.vault_read_secret(secret_path=secret), secret
-            )
+            config = self.vault_read_secret(secret_path=secret)
 
             if config is not None:
+                if config.get("id", None) is None:
+                    config["id"] = secret
+                    logger.debug(f"Client id is set to secret name '{secret}'")
+
                 _client_config.append(config)
-                vault_client_secret.labels(status="ok").inc()
 
             else:
-                logger.warning(
-                    f"Secret '{secret}' in Vault, missing 'secret' key, or have incorrect structure"
-                )
-                vault_client_secret.labels(status="failed").inc()
+                logger.warning(f"Empty secret '{secret}' from Vault, skipping...")
 
         return _client_config

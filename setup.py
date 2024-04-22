@@ -44,6 +44,8 @@ setup(
         "protobuf~=4.25.3",
         "hvac~=2.1.0",
         "prometheus_client~=0.20.0",
+        "pydantic-settings~=2.2.1",
+        "pydantic>=2.7.0",
     ],
     python_requires=">=3.8",
     project_urls={"Source": about["__url__"]},

@@ -1,6 +1,6 @@
 from prometheus_client import (
     start_http_server,
-    Counter,
+    Gauge,
     REGISTRY,
     PROCESS_COLLECTOR,
     PLATFORM_COLLECTOR,
@@ -11,11 +11,11 @@ from dexus_vault.utils.logger import logger
 Define the Prometheus metrics and start the metrics server.
 """
 
-client_create_metric = Counter("client_create", "Client creation status", ["status"])
-client_delete_metric = Counter("client_delete", "Client deletion status", ["status"])
-vault_client_secret = Counter(
-    "vault_client_secret",
-    "Number of wrong client specifications in Vault",
+client_create_metric = Gauge("client_create", "Client creation status", ["status"])
+client_delete_metric = Gauge("client_delete", "Client deletion status", ["status"])
+vault_client_secret_metric = Gauge(
+    "vault_secret",
+    "Number of wrong secrets specifications in Vault",
     ["status"],
 )
 # SYNC_TIME = Summary("sync_time_seconds", "Time spent on synchronization")
