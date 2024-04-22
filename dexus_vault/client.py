@@ -1,5 +1,6 @@
-import os
 import time
+
+from pydantic import ValidationError
 
 from dexus_vault.src.dex_processor import DexClient
 from dexus_vault.src.vault_processor import VaultClient
@@ -39,22 +40,33 @@ def sync_dex_clients(dex_client: object, vault_clients: list) -> set:
     # TODO: make state in memory and compare with it
     # logger.debug(f"Target clients {[x.get('id') for x in vault_clients]}")
 
-    for client in vault_clients:
-        print(client["id"])
-        dex_get_client = dex_client.get_dex_client(client_id=client["id"])
+    for vault_client in vault_clients:
 
-        print(dex_get_client)
+        try:
+            client = ClientModel(**vault_client)
 
+        except ValidationError as error:
+            logger.warning(
+                f"Secret '{vault_client['id']}' in Vault, missing 'secret' or have incorrect structure"
+            )
+            logger.debug(f"ValidationError: {error}")
+            continue
+
+        dex_get_client = dex_client.get_dex_client(client_id=client.id)
         if dex_get_client is not None:
 
-            client_from_dex = ClientModel(**dex_get_client.get("client", {}))
-            if client["id"] == client_from_dex.id:
+            try:
+                client_from_dex = ClientModel(**dex_get_client)
 
+            except ValidationError as error:
+                logger.warning(
+                    f"Client '{client.id}' returned from Dex have incorrect structure {error}"
+                )
+                continue
+
+            if client.id == client_from_dex.id:
                 if client == client_from_dex:
                     logger.debug(f"Client '{client_from_dex.id}' already exist.")
-                    # if you see this, that means that means that I forget to remove debug statement
-                    dex_client.create_dex_client(client)
-
                 else:
                     logger.info(
                         f"Detected changes in '{client_from_dex.id}' client configuration, will be recreated"
@@ -62,8 +74,8 @@ def sync_dex_clients(dex_client: object, vault_clients: list) -> set:
                     dex_client.delete_dex_client(client_from_dex.id)
                     dex_client.create_dex_client(client)
         else:
-            logger.info(f"Client '{client['id']}' not found, will be created")
-            dex_client.create_dex_client(ClientModel(**client))
+            logger.info(f"Client '{client.id}' not found, will be created")
+            dex_client.create_dex_client(client)
 
 
 def run():

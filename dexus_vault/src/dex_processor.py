@@ -91,8 +91,7 @@ class DexClient:
 
         try:
             response = DexStub(self.channel).GetClient(dex_request)
-            print(MessageToDict(response))
-            return MessageToDict(response)
+            return MessageToDict(response).get("client")
 
         except grpc.RpcError as rpc_error:
             if rpc_error.code() == grpc.StatusCode.UNKNOWN:
@@ -109,7 +108,7 @@ class DexClient:
         Create OIDC client in Dex
         """
         try:
-            print(client)
+
             request = pb2.CreateClientReq()
             request.client.id = client.id
             request.client.secret = client.secret
@@ -120,7 +119,7 @@ class DexClient:
             request.client.logo_url = client.logo_url
 
             response = MessageToDict(DexStub(self.channel).CreateClient(request))
-            print(response)
+
             if response.get("client", None) is not None:
                 client_id = response.get("client").get("id")
                 client_create_metric.labels(status="ok").inc()

@@ -1,15 +1,11 @@
 import sys
 import time
 import requests
-from pydantic import ValidationError
 
 from hvac.api.auth_methods import Kubernetes
 import hvac
 
-# from dexus_vault.utils.client_parser import normalize_config
 from dexus_vault.utils.logger import logger
-from dexus_vault.utils.metrics import vault_client_secret_metric
-from dexus_vault.utils.config import ClientModel
 
 
 class VaultClient:
@@ -154,21 +150,24 @@ class VaultClient:
         """
         Read specified secret from Vault
         """
+        try:
+            if self.config.vault_engine == "v1":
+                response = self.client.secrets.kv.v1.read_secret(
+                    path=f"{self.config.vault_clients_path}/{secret_path}",
+                    mount_point=self.config.vault_mount_point,
+                )
+                return response["data"]
 
-        if self.config.vault_engine == "v1":
-            response = self.client.secrets.kv.v1.read_secret(
-                path=f"{self.config.vault_clients_path}/{secret_path}",
-                mount_point=self.config.vault_mount_point,
-            )
-            return response["data"]
+            elif self.config.vault_engine == "v2":
+                response = self.client.secrets.kv.read_secret_version(
+                    path=f"{self.config.vault_clients_path}/{secret_path}",
+                    mount_point=self.config.vault_mount_point,
+                )
+                return response["data"]["data"]
 
-        elif self.config.vault_engine == "v2":
-            response = self.client.secrets.kv.read_secret_version(
-                path=f"{self.config.vault_clients_path}/{secret_path}",
-                mount_point=self.config.vault_mount_point,
-            )
-            return response["data"]["data"]
-        return None
+        except Exception as error:
+            logger.error(f"Error reading secret {secret_path} from Vault: {error}")
+            return None
 
     def vault_read_secrets(self) -> list:
         """
@@ -177,42 +176,16 @@ class VaultClient:
         _client_config = []
 
         for secret in self.vault_list_secrets():
-            # try:
-            #     client_def = self.vault_read_secret(secret_path=secret)
-            #     client_def["vault_secret_name"] = secret
-            #     config = ClientModel(
-            #         **client_def
-            #     )
-            # except ValidationError as error:
-            #     logger.warning(
-            #         f"Vault secret '{secret}' have incorrect structure {error}"
-            #     )
-            #     vault_client_secret_metric.labels(status="failed").inc()
-            #     continue
-            try:
-                config = self.vault_read_secret(secret_path=secret)
-                if config is not None:
-                    if config.get("id", None) is None:
-                        config["id"] = secret
-                        logger.debug(f"Client id is set to secret name '{secret}'")
-                    else:
-                        logger.debug(f"Client id is '{config.get('id')}'")
-                # print(config)
-                # print(ClientModel(**config).model_dump())
-            except ValidationError as error:
-                logger.warning(f"Vault secret '{secret}' have incorrect structure")
-                logger.debug(f"Validation error: {error}")
-                vault_client_secret_metric.labels(status="failed").inc()
-                continue
+            config = self.vault_read_secret(secret_path=secret)
 
             if config is not None:
+                if config.get("id", None) is None:
+                    config["id"] = secret
+                    logger.debug(f"Client id is set to secret name '{secret}'")
+
                 _client_config.append(config)
-                vault_client_secret_metric.labels(status="ok").inc()
 
             else:
-                logger.warning(
-                    f"Secret '{secret}' in Vault, missing 'secret' key, or have incorrect structure"
-                )
-                vault_client_secret_metric.labels(status="failed").inc()
+                logger.warning(f"Empty secret '{secret}' from Vault, skipping...")
 
         return _client_config

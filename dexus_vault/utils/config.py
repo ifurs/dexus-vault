@@ -62,7 +62,7 @@ class ClientModel(BaseModel):
         default=[], validation_alias=AliasChoices("trusted_peers", "trustedPeers")
     )
     public: bool = False
-    name: Optional[str] = None
+    name: Optional[str] = ""
     logo_url: Optional[str] = Field(
-        default=None, validation_alias=AliasChoices("logo_url", "logoUrl")
+        default="", validation_alias=AliasChoices("logo_url", "logoUrl")
     )
