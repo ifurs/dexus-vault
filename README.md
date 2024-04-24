@@ -126,6 +126,7 @@ There are several authentication methods available:
 - LDAP authentication
 - Certificate-based authentication
 - AppRole authentication: To use this method, set `VAULT_APPROLE` to `true`. The HVAC client will then log into Vault using the default file mounted by the Vault agent by default, also there is possible to specify approle id and secret via env vars too.
+- Kubernetes authentication: To use this method, set variable `VAULT_KUBERNETES_ROLE` with role name
 
 ### Metrics
 
@@ -133,11 +134,17 @@ For now "dexus-vault" publish simplified metrics, like this:
 
 ```bash
 client_create{status="ok"} 1.0
+client_delete{status="failed"} 3.0
+client_update{status="failed"} 0.0
+client_skip 5.0
+incorrect_secrets 2.0
 ```
 
-for "status" could be values "ok" and "failed"
+- labeled metrics(status): `client_create`, `client_delete`, `client_update`
+- non labeled: `client_skip` and `incorrect_secrets`
+for "status" label could be values "ok" and "failed"
 
-> **NOTE:** We plan to redesign the metrics system in the near future. Any contributions to this effort are greatly appreciated.
+> **NOTE:** Metrics are still under discussion. Any contributions to this effort are greatly appreciated.
 
 ## 🔒 Vault secret structure
 
@@ -179,8 +186,8 @@ and compiled with `grpc_tools.protoc`
 
 Plans for future:
 
-- [ ] Redesign metrics concept to make it more Prometheus friendly
-- [ ] Switch to pydantic
+- [x] Redesign metrics concept to make it more Prometheus friendly
+- [x] Switch to pydantic
 - [ ] Implement functionality that tracks current clients state in Dex
 - [ ] Make logs more Fluent
 - [ ] Redesign dexus-vault to work like cli and accepts params
