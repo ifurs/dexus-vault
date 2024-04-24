@@ -61,14 +61,11 @@ def sync_dex_clients(dex_client: object, vault_clients: list) -> set:
                 logger.warning(
                     f"Client '{client.id}' returned from Dex have incorrect structure {error}"
                 )
-                # TODO: add metric for incorrect structure from Dex, TBD
                 continue
 
             if client.id == client_from_dex.id:
                 if client == client_from_dex:
                     logger.debug(f"Client '{client_from_dex.id}' already exist.")
-                    # just for example, we can add more complex logic here
-                    # state["clients_skipped"] += 1
                     state_counter(
                         current_state, {"operation": "update", "status": "skipped"}
                     )

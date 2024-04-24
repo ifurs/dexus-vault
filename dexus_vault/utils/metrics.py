@@ -72,9 +72,12 @@ def state_counter(state: dict, response: dict) -> dict:
         elif response["status"] == "failed":
             state["clients_create_failed"] += 1
 
+    # Count secrets
     elif response["operation"] == "secret":
         if response["status"] == "ok":
-            state["secrets"] += 1
+            logger.debug(
+                "Secrets are not counted in state yet, check discussions github repo"
+            )
         elif response["status"] == "failed":
             state["incorrect_secrets"] += 1
     else:
