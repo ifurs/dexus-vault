@@ -126,6 +126,7 @@ There are several authentication methods available:
 - LDAP authentication
 - Certificate-based authentication
 - AppRole authentication: To use this method, set `VAULT_APPROLE` to `true`. The HVAC client will then log into Vault using the default file mounted by the Vault agent by default, also there is possible to specify approle id and secret via env vars too.
+- Kubernetes authentication: To use this method, set variable `VAULT_KUBERNETES_ROLE` with role name
 
 ### Metrics
 
@@ -185,8 +186,8 @@ and compiled with `grpc_tools.protoc`
 
 Plans for future:
 
-- [ ] Redesign metrics concept to make it more Prometheus friendly
-- [ ] Switch to pydantic
+- [*] Redesign metrics concept to make it more Prometheus friendly
+- [*] Switch to pydantic
 - [ ] Implement functionality that tracks current clients state in Dex
 - [ ] Make logs more Fluent
 - [ ] Redesign dexus-vault to work like cli and accepts params
