@@ -107,7 +107,7 @@ def run():
     metrics_enabled = metrics_server(config=MetricsConfig())
 
     while True:
-        # define clients
+        # redefine dex client, to close previous connection, by method __del__
         dex_client = DexClient(config=DexConfig())
         vault_client = VaultClient(config=VaultConfig())
         # get clients from Vault

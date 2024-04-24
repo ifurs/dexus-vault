@@ -30,14 +30,15 @@ class DexClient:
 
         if self.config.client_crt and self.config.client_key:
             # load credentials from files
-            with open(self.config.ca_crt, "rb") as ca_crt, open(
-                self.config.client_key, "rb"
-            ) as client_key, open(self.config.client_crt, "rb") as client_crt:
+            with open(self.config.ca_crt, "r") as ca, open(
+                self.config.client_key, "r"
+            ) as key, open(self.config.client_crt, "r") as crt:
+
                 # define secure channel with credentials
                 self.creds = grpc.ssl_channel_credentials(
-                    root_certificates=ca_crt.read(),
-                    private_key=client_key.read(),
-                    certificate_chain=client_crt.read(),
+                    root_certificates=ca.read(),
+                    private_key=key.read(),
+                    certificate_chain=crt.read(),
                 )
             return grpc.secure_channel(
                 target=self.config.dex_grpc_url, credentials=self.creds
