@@ -9,7 +9,6 @@ from dexus_vault.grpc_dexidp.dexidp.api_pb2_grpc import DexStub
 import dexus_vault.grpc_dexidp.dexidp.api_pb2 as pb2
 
 from dexus_vault.utils.logger import logger
-from dexus_vault.utils.metrics import client_create_metric, client_delete_metric
 
 
 class DexClient:
@@ -20,7 +19,6 @@ class DexClient:
     def __init__(self, config):
         # credentials used for Dex connection including GRPC URL
         self.config = config
-
         # channel credentials obj placeholder
         self.channel = self.dex_grpc_connect()
 
@@ -30,18 +28,26 @@ class DexClient:
         Open connection to Dex gRPC
         """
 
-        if self.config["CLIENT_CRT"]:
-            self.creds = grpc.ssl_channel_credentials(
-                root_certificates=self.config["CA_CRT"],
-                private_key=self.config["CLIENT_KEY"],
-                certificate_chain=self.config["CLIENT_CRT"],
-            )
+        if self.config.client_crt and self.config.client_key:
+            # load credentials from files
+            with open(self.config.ca_crt, "r") as ca, open(
+                self.config.client_key, "r"
+            ) as key, open(self.config.client_crt, "r") as crt:
+
+                # define secure channel with credentials
+                self.creds = grpc.ssl_channel_credentials(
+                    root_certificates=ca.read(),
+                    private_key=key.read(),
+                    certificate_chain=crt.read(),
+                )
             return grpc.secure_channel(
-                target=self.config["DEX_GRPC_URL"], credentials=self.creds
+                target=self.config.dex_grpc_url, credentials=self.creds
             )
+
         else:
+            # insecure channel
             logger.debug(f"Dex client started in insecure channel")
-            return grpc.insecure_channel(target=self.config["DEX_GRPC_URL"])
+            return grpc.insecure_channel(target=self.config.dex_grpc_url)
 
     def dex_grpc_close_connection(self):
         """
@@ -50,6 +56,7 @@ class DexClient:
         if self.channel:
             self.channel.close()
 
+    # TODO: research more clean way for retrying connection
     def dex_waiter(self) -> bool:
         """
         Ensure connection to Dex gRPC
@@ -60,12 +67,12 @@ class DexClient:
                 logger.info(f"Dex server version {self.get_dex_version()}")
                 return True
             except Exception as error:
-                if _retry >= self.config["DEX_MAX_RETRIES"]:
+                if _retry >= self.config.dex_max_retries:
                     raise RuntimeError(f"Could not connect to Dex gRPC server: {error}")
                 else:
                     _retry += 1
                     logger.debug(f"Dex gRPC is unavailable, retying...")
-                    time.sleep(self.config["DEX_RETRY_WAIT"])
+                    time.sleep(self.config.dex_retry_wait)
 
     def get_dex_version(self) -> dict:
         """
@@ -73,28 +80,27 @@ class DexClient:
         """
         dex_request = pb2.VersionReq()
         response = DexStub(self.channel).GetVersion(dex_request)
-
         return MessageToDict(response)
 
     def get_dex_client(self, client_id: str) -> dict | None:
         """
-        Call Get Dex Client with by client id
+        Get Dex Client by id
         """
         dex_request = pb2.GetClientReq()
         dex_request.id = client_id
 
         try:
             response = DexStub(self.channel).GetClient(dex_request)
-            return MessageToDict(response)
+            return MessageToDict(response).get("client")
 
         except grpc.RpcError as rpc_error:
             if rpc_error.code() == grpc.StatusCode.UNKNOWN:
                 logger.debug(
-                    f"RESPONSE FROM GRPC: {rpc_error.details()}, client {client_id}"
+                    f"Dex gRPC response: {rpc_error.details()}, client {client_id}"
                 )
             else:
                 logger.warning(
-                    f"GRPC CALL CODE: {rpc_error.code()} with details {rpc_error.details()}"
+                    f"Dex gRPC error code: {rpc_error.code()} with details {rpc_error.details()}"
                 )
 
     def create_dex_client(self, client: dict) -> dict | None:
@@ -102,28 +108,57 @@ class DexClient:
         Create OIDC client in Dex
         """
         try:
+            # define MessageReq parameter for gRPC
             request = pb2.CreateClientReq()
-            request.client.id = client.get("id")
-            request.client.secret = client.get("secret")
-            request.client.redirect_uris.extend(client.get("redirect_uris", ""))
-            request.client.trusted_peers.extend(client.get("trusted_peers", ""))
-            request.client.public = client.get("public", 0)
-            request.client.name = client.get("name", "")
-            request.client.logo_url = client.get("logo_url", "")
-
+            request.client.id = client.id
+            request.client.secret = client.secret
+            request.client.redirect_uris.extend(client.redirect_uris)
+            request.client.trusted_peers.extend(client.trusted_peers)
+            request.client.public = client.public
+            request.client.name = client.name
+            request.client.logo_url = client.logo_url
+            # send request to Dex gRPC and store response
             response = MessageToDict(DexStub(self.channel).CreateClient(request))
+            # check if client was created
             if response.get("client", None) is not None:
                 client_id = response.get("client").get("id")
-                client_create_metric.labels(status="ok").inc()
                 logger.info(f"Created new Dex client '{client_id}'")
-                return client_id
+                return {
+                    "client": client_id,
+                    "operation": "create",
+                    "status": "ok",
+                    "response": response,
+                }
+            # check if client already exists returned from Dex
+            elif response.get("alreadyExists", None) is not None:
+                logger.info(
+                    f"Client {client.id} already exists, check Vault configs for duplicates"
+                )
+                return {
+                    "client": client.id,
+                    "operation": "create",
+                    "status": "skipped",
+                    "response": response,
+                }
+            # check if there was an error in response
             else:
-                logger.warning(f"RESPONSE FROM GRPC: {response}")
-
+                logger.warning(f"Dex gRPC response: {response}")
+                return {
+                    "client": client.id,
+                    "operation": "delete",
+                    "status": "failed",
+                    "response": response,
+                }
+        # catch any exception and log it
         except Exception as error:
-            client_create_metric.labels(status="failed").inc()
-            logger.error(f"Failed to create client {client.get('id')}")
-            logger.error(f"RESPONSE FROM GRPC: {error}")
+            logger.error(f"Failed to create client {client.id}")
+            logger.error(f"Dex gRPC response: {error}")
+            return {
+                "client": client.id,
+                "operation": "delete",
+                "status": "failed",
+                "response": error,
+            }
 
     def delete_dex_client(self, client_id: str) -> None:
         """
@@ -133,20 +168,35 @@ class DexClient:
             dex_request = pb2.DeleteClientReq()
             dex_request.id = client_id
 
-            # Because of Dex implementation, this request returns None
-            # Or simple dict {'notFound': True} so it need to be processed
+            # Returns None(means deleted) or {'notFound': True}, in other case it will raise an exception
             response = MessageToDict(DexStub(self.channel).DeleteClient(dex_request))
-
             if response.get("notFound", None) is not None:
-                client_delete_metric.labels(status="failed").inc()
                 logger.warning(f"Client '{client_id}' not found")
+                return {
+                    "client": client_id,
+                    "operation": "delete",
+                    "status": "skipped",
+                    "response": response,
+                }
+
             else:
-                client_create_metric.labels(status="ok").inc()
                 logger.info(f"client {client_id} was deleted")
+                return {
+                    "client": client_id,
+                    "operation": "delete",
+                    "status": "ok",
+                    "response": response,
+                }
+
         except Exception as error:
-            client_delete_metric.labels(status="failed").inc()
             logger.error(f"Failed to delete client {client_id}")
-            logger.error(f"RESPONSE FROM GRPC: {error}")
+            logger.error(f"Dex gRPC response: {error}")
+            return {
+                "client": client_id,
+                "operation": "delete",
+                "status": "failed",
+                "response": error,
+            }
 
     def __del__(self):
         """

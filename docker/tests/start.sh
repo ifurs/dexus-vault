@@ -40,9 +40,9 @@ start_docker_compose() {
 function down_docker_compose() {
     if [ "$arg2" = "dexus_vault" ]; then
         docker-compose -f docker-compose.dexus_vault.yml down
-        rm .env
     fi
     docker-compose down
+    rm .env
     echo '\033[0;32m docker-compose down \033[0m'
 }
 
@@ -90,15 +90,20 @@ vault_create_test() {
 }
 
 generate_dotenv() {
-    echo "DEX_GRPC_URL=dexidp:5557" > .env
-    echo "VAULT_ADDR=http://vault:8200" >> .env
+    if "$arg2" = "dexus_vault"; then
+        echo "DEX_GRPC_URL=dexidp:5557" > .env
+        echo "VAULT_ADDR=http://vault:8200" >> .env
+    else
+        echo "DEX_GRPC_URL=127.0.0.1:5557" > .env
+        echo "VAULT_ADDR=$VAULT_ADDR" >> .env
+    fi
     echo "VAULT_TOKEN=$app_token" >> .env
     echo "VAULT_CLIENTS_PATH=/dex" >> .env
     echo "VAULT_MOUNT_POINT=kv" >> .env
+    echo "Generated .env file with Vault token and other settings, that you can use for dexus_vault or other services."
 }
 
 run_dexus_vault() {
-    generate_dotenv
     docker-compose -f docker-compose.dexus_vault.yml up -d
 }
 
@@ -106,6 +111,7 @@ init_all() {
     start_docker_compose
     vault_init
     vault_create_test
+    generate_dotenv
     if [ "$arg2" = "dexus_vault" ]; then
         echo "Starting dexus_vault..."
         run_dexus_vault
