@@ -122,22 +122,42 @@ class DexClient:
             if response.get("client", None) is not None:
                 client_id = response.get("client").get("id")
                 logger.info(f"Created new Dex client '{client_id}'")
-                return {"client": client_id, "status": "ok", "response": response}
+                return {
+                    "client": client_id,
+                    "operation": "create",
+                    "status": "ok",
+                    "response": response,
+                }
             # check if client already exists returned from Dex
             elif response.get("alreadyExists", None) is not None:
                 logger.info(
                     f"Client {client.id} already exists, check Vault configs for duplicates"
                 )
-                return {"client": client.id, "status": "skipped", "response": response}
+                return {
+                    "client": client.id,
+                    "operation": "create",
+                    "status": "skipped",
+                    "response": response,
+                }
             # check if there was an error in response
             else:
                 logger.warning(f"Dex gRPC response: {response}")
-                return {"client": client.id, "status": "failed", "response": response}
+                return {
+                    "client": client.id,
+                    "operation": "delete",
+                    "status": "failed",
+                    "response": response,
+                }
         # catch any exception and log it
         except Exception as error:
             logger.error(f"Failed to create client {client.id}")
             logger.error(f"Dex gRPC response: {error}")
-            return {"client": client.id, "status": "failed", "response": error}
+            return {
+                "client": client.id,
+                "operation": "delete",
+                "status": "failed",
+                "response": error,
+            }
 
     def delete_dex_client(self, client_id: str) -> None:
         """
@@ -151,16 +171,31 @@ class DexClient:
             response = MessageToDict(DexStub(self.channel).DeleteClient(dex_request))
             if response.get("notFound", None) is not None:
                 logger.warning(f"Client '{client_id}' not found")
-                return {"client": client_id, "status": "skipped", "response": response}
+                return {
+                    "client": client_id,
+                    "operation": "delete",
+                    "status": "skipped",
+                    "response": response,
+                }
 
             else:
                 logger.info(f"client {client_id} was deleted")
-                return {"client": client_id, "status": "ok", "response": response}
+                return {
+                    "client": client_id,
+                    "operation": "delete",
+                    "status": "ok",
+                    "response": response,
+                }
 
         except Exception as error:
             logger.error(f"Failed to delete client {client_id}")
             logger.error(f"Dex gRPC response: {error}")
-            return {"client": client_id, "status": "failed", "response": error}
+            return {
+                "client": client_id,
+                "operation": "delete",
+                "status": "failed",
+                "response": error,
+            }
 
     def __del__(self):
         """
