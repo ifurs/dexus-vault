@@ -26,7 +26,7 @@ def metrics_server(config):
     Start the Prometheus metrics server.
     """
     try:
-        start_metrics_server(config)
+        return start_metrics_server(config)
     except ValidationError as error:
         logger.error(f"Failed to validate metrics variables: {error}")
     except Exception as error:
@@ -101,7 +101,7 @@ def run():
     general_config = GeneralConfig()
     dex_client = DexClient(config=DexConfig())
     dex_client.dex_waiter()
-    metrics_server(config=MetricsConfig())
+    metrics_enabled = metrics_server(config=MetricsConfig())
 
     while True:
         # define clients
@@ -114,6 +114,7 @@ def run():
             f"Sync completed, next sync after {general_config.sync_interval} seconds"
         )
         # Publish metrics with current state to Prometheus, then reset state
-        publish_metrics(current_state)
+        if metrics_enabled:
+            publish_metrics(current_state)
         # Wait for next sync
         time.sleep(general_config.sync_interval)

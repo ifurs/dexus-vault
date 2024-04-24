@@ -125,3 +125,8 @@ def start_metrics_server(config) -> None:
     if config.metrics_enable:
         start_http_server(config.metrics_port)
         logger.info(f"Prometheus metrics server started on port {config.metrics_port}")
+        return True
+
+    else:
+        logger.info("Prometheus metrics server disabled")
+        return False
