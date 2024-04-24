@@ -133,11 +133,17 @@ For now "dexus-vault" publish simplified metrics, like this:
 
 ```bash
 client_create{status="ok"} 1.0
+client_delete{status="failed"} 3.0
+client_update{status="failed"} 0.0
+client_skip 5.0
+incorrect_secrets 2.0
 ```
 
-for "status" could be values "ok" and "failed"
+- labeled metrics(status): `client_create`, `client_delete`, `client_update`
+- non labeled: `client_skip` and `incorrect_secrets`
+for "status" label could be values "ok" and "failed"
 
-> **NOTE:** We plan to redesign the metrics system in the near future. Any contributions to this effort are greatly appreciated.
+> **NOTE:** Metrics are still under discussion. Any contributions to this effort are greatly appreciated.
 
 ## 🔒 Vault secret structure
 
