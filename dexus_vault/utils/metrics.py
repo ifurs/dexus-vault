@@ -17,7 +17,7 @@ client_update_metric = Gauge("client_update", "Client update status", ["status"]
 client_skip_metric = Gauge("client_skip", "Clients skipped to sync")
 incorrect_secrets_metric = Gauge(
     "incorrect_secrets",
-    "Number of wrong secrets specifications in secret engine",
+    "Number of incorrect secrets specifications in secret engine",
 )
 
 # TODO: research if pydantic can cover that
@@ -81,7 +81,7 @@ def state_counter(state: dict, response: dict) -> dict:
         elif response["status"] == "failed":
             state["incorrect_secrets"] += 1
     else:
-        logger.debug("No state to update on response {response}")
+        logger.debug(f"No state to update on response {response}")
 
     logger.debug(f"Current updated: {state}")
     return state
@@ -100,9 +100,9 @@ def publish_metrics(state: dict) -> None:
         client_update_metric.labels(status="failed").set(state["clients_update_failed"])
         client_skip_metric.set(state["clients_skipped"])
         incorrect_secrets_metric.set(state["incorrect_secrets"])
-        logger.debug("Metrics published with state {state}")
+        logger.debug(f"Metrics published with state {state}")
     except:
-        logger.warning("Failed to update state, got value: {state}")
+        logger.warning(f"Failed to update state, got value: {state}")
     # we need to reset anyway
     reset_state(state)
 

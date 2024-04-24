@@ -84,6 +84,9 @@ def sync_dex_clients(dex_client: object, vault_clients: list) -> set:
                             },
                         )
                     else:
+                        logger.warning(
+                            f"Failed to delete client '{client.id}', response: {delete_response}"
+                        )
                         state_counter(
                             current_state, {"operation": "update", "status": "failed"}
                         )
