@@ -186,8 +186,8 @@ and compiled with `grpc_tools.protoc`
 
 Plans for future:
 
-- [*] Redesign metrics concept to make it more Prometheus friendly
-- [*] Switch to pydantic
+- [x] Redesign metrics concept to make it more Prometheus friendly
+- [x] Switch to pydantic
 - [ ] Implement functionality that tracks current clients state in Dex
 - [ ] Make logs more Fluent
 - [ ] Redesign dexus-vault to work like cli and accepts params
