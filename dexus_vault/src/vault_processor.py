@@ -63,12 +63,12 @@ class VaultClient:
         client = hvac.Client(url=self.config.vault_addr)
         self._check_vault_status(client)
 
-        if self.config.vault_approle_role_id and self.config.vault_approle_secret_id:
+        if self.config.vault_approle_role_id:
             auth_method = "approle"
 
             if self.config.vault_approle_secret_path is not None:
-                with self.config.vault_approle_secret_path.open("r") as secret_id:
-                    client.auth.approle.login_by_approle_path(
+                with open(self.config.vault_approle_secret_path, "r") as secret_id:
+                    client.auth.approle.login(
                         role_id=self.config.vault_approle_role_id,
                         secret_id=secret_id.read(),
                     )
