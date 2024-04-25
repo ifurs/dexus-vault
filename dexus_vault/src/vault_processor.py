@@ -39,7 +39,7 @@ class VaultClient:
                     )
             except requests.exceptions.ConnectionError:
                 logger.warning(f"Vault {self.config.vault_addr} connection failed")
-            time.sleep(self.config.vault_addr)
+            time.sleep(self.config.vault_retry_wait)
         logger.error(f"Vault {self.config.vault_addr} unreachable, exiting...")
         sys.exit(1)
 
