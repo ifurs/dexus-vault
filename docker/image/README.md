@@ -18,7 +18,7 @@ VAULT_ADDR="https://127.0.0.1:8200"
 # example for path kv/dex/*
 VAULT_MOUNT_POINT="kv"
 VAULT_CLIENTS_PATH="dex"
-VAULT_APPROLE=true
+VAULT_TOKEN=...
 ```
 
 For more configuration options check [README](https://github.com/ifurs/dexus-vault/README.md)

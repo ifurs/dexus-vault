@@ -173,7 +173,7 @@ For defining lists in `redirect_uris` and `trusted_peers`, there are two methods
 
 The `docker/tests` directory houses a `docker-compose.yaml` file, designed to facilitate local testing by running both Vault and Dex. However, this configuration is not suitable for production environments.
 
-For more details, please see the [README](docker/tests/README.md).
+For more details, please see the [README](tests/README.md).
 
 ## 📓 Other notes
 
