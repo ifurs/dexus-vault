@@ -5,7 +5,7 @@ services:
   dexus_vault:
     image: ifurs/dexus-vault
     build:
-      context: ../docker
+      context: ../docker/image
       dockerfile: Dockerfile
     env_file:
       - .env
