@@ -29,3 +29,6 @@ LABEL maintainer="ifurs" \
 
 # Define the command to run when the container starts
 ENTRYPOINT ["dexus-vault"]
+
+# TODO: Add a healthcheck
+# HEALTHCHECK CMD dexus-vault --check
