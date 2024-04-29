@@ -6,6 +6,10 @@ ARG VERSION
 ARG BUILD_DATE
 ARG VCS_REF
 
+# Create a dexus user and switch to it
+RUN useradd --create-home dexus
+USER dexus
+
 # Install dexus-vault
 RUN pip install --no-cache-dir dexus-vault==$VERSION
 
