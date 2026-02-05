@@ -41,7 +41,7 @@ setup(
         "grpcio~=1.62.0",
         "grpcio-tools~=1.60.1",
         "googleapis-common-protos>=1.62.0",
-        "protobuf~=4.25.3",
+        "protobuf~=5.29.6",
         "hvac~=2.1.0",
         "prometheus_client~=0.20.0",
         "pydantic-settings~=2.2.1",
