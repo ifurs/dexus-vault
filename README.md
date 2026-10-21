@@ -25,6 +25,7 @@
   - [EKS with the AWS SSM backend](#eks-with-the-aws-ssm-backend)
 - [Local testing](#-local-testing)
 - [Development](#-development)
+- [Releasing](#-releasing)
 - [Upgrading from 0.3](#-upgrading-from-03)
 - [Thanks](#-thanks)
 
@@ -415,12 +416,14 @@ For [Claude Code](https://claude.com/claude-code), [CLAUDE.md](CLAUDE.md) holds 
 | `dexus-developer` | opus | implements changes test-first along the existing seams; a Stop hook blocks it from finishing while lint or unit tests fail |
 | `dexus-tester` | sonnet | runs unit and integration suites against local endpoints only, reproduces bugs as failing tests; may edit test code only |
 | `dexus-reviewer` | opus | independent review of a diff in a fresh context, re-runs the checks, reports only correctness, security and requirement gaps |
+| `dexus-security-auditor` | opus | read-only security audit: runs the scanner suite, checks the threat model, reports only high-confidence exploitable findings; keeps accepted risks in project memory |
 
 | skill | use |
 |:---|:---|
 | `dex-api` | verified Dex RPC semantics and version matrix, preloaded into the agents |
 | `dexus-verify` | the verification gate: which checks to run for which change, and how to report evidence |
 | `/upgrade-dex-api <tag>` | step-by-step upgrade of the vendored Dex API |
+| `/security-audit [full \| diff <base>]` | the security audit procedure: scanners, threat model, how findings are judged |
 
 The hooks used by the agents are in [scripts/agents/guard.py](scripts/agents/guard.py), tested in `tests/test_agent_guard.py`.
 
@@ -429,6 +432,22 @@ The Dex gRPC stubs in `dexus_vault/grpc_dexidp` are generated from [api.proto](h
 ```bash
 scripts/generate_proto.sh v2.46.0
 ```
+
+## 🚢 Releasing
+
+Releases are automatic and never start from a hand-pushed tag:
+
+1. Open a pull request that bumps `__version__` in `dexus_vault/__version__.py` (`MAJOR.MINOR.PATCH`). CI's *Release preview* check shows "Merging this pull request releases X" and fails if the version is lower than the latest release.
+2. Review and merge it into `main`.
+3. The *Release* workflow (`.github/workflows/publish-to-pypi.yml`) sees a version without a tag, then builds with `uv build`, publishes to PyPI with trusted publishing, creates the tag and a GitHub release with Sigstore-signed files and generated notes, and publishes the signed multi-arch Docker image.
+
+Pushing tags by hand does not release anything. If a release job fails, re-run the failed jobs; publishing is idempotent. To publish the Docker image for an existing tag again, run *Publish Docker image* manually with that tag.
+
+Recommended repository settings (Settings → Environments / Rules), which make this safe:
+
+- **Required reviewers on the `pypi` and `dockerhub` environments**, so every release waits for a maintainer's approval.
+- **A branch ruleset on `main`** requiring pull requests, an approving review and passing CI.
+- **A tag ruleset on all tags** that blocks updates and deletions, plus **immutable releases**, so a published version cannot be changed afterwards.
 
 ## ⬆️ Upgrading from 0.3
 

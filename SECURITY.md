@@ -12,7 +12,7 @@ dexus-vault handles Dex client secrets and credentials for Vault and AWS, so rep
 
 ## Verifying releases
 
-Every release is built by GitHub Actions from a tag in this repository, without manual steps.
+Every release is built by GitHub Actions from `main` after a reviewed pull request bumps the version; no release starts from a hand-pushed tag.
 
 **PyPI packages** are uploaded with trusted publishing and carry [PEP 740](https://peps.python.org/pep-0740/) attestations. The same files with Sigstore signatures are attached to the GitHub release:
 
@@ -26,6 +26,6 @@ uvx pypi-attestations verify pypi --repository https://github.com/ifurs/dexus-va
 ```bash
 cosign verify ifurs/dexus-vault:<version> \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-  --certificate-identity-regexp '^https://github\.com/ifurs/dexus-vault/\.github/workflows/docker-publish\.yml@refs/(tags/|heads/main$)'
+  --certificate-identity 'https://github.com/ifurs/dexus-vault/.github/workflows/docker-publish.yml@refs/heads/main'
 docker buildx imagetools inspect ifurs/dexus-vault:<version> --format '{{ json .SBOM }}'
 ```

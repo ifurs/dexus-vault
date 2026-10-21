@@ -1,19 +1,34 @@
+# Called by the release workflow (publish-to-pypi.yml) for every new release.
+# Run it by hand to publish the image of an existing release tag again.
 name: Publish Docker 🐳 image 📦 to DockerHub
 on:
-  push:
-    tags:
-      - "[0-9]+.[0-9]+.[0-9]+"
+  workflow_call:
+    inputs:
+      tag:
+        description: Release tag to publish
+        required: true
+        type: string
+      latest:
+        description: Also move the latest tag
+        required: false
+        type: boolean
+        default: false
   workflow_dispatch:
     inputs:
       tag:
         description: Existing release tag to publish, e.g. 0.4.0
         required: true
         type: string
+      latest:
+        description: Also move the latest tag (only for the newest release)
+        required: false
+        type: boolean
+        default: false
 
 permissions: {}
 
 concurrency:
-  group: docker-${{ inputs.tag || github.ref_name }}
+  group: docker-${{ inputs.tag }}
   cancel-in-progress: false
 
 env:
@@ -31,7 +46,7 @@ jobs:
     steps:
       - name: Validate the release tag
         env:
-          TAG: ${{ inputs.tag || github.ref_name }}
+          TAG: ${{ inputs.tag }}
         run: |
           if ! [[ "$TAG" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "::error::'$TAG' is not a release tag"
@@ -67,11 +82,11 @@ jobs:
         with:
           images: ${{ env.IMAGE_NAME }}
           flavor: latest=false
-          # "latest" only for tag pushes, republishing an older tag by hand must not move it
+          # "latest" only when asked for: republishing an older tag must not move it
           tags: |
             type=semver,pattern={{version}},value=${{ env.RELEASE_TAG }}
             type=semver,pattern={{major}}.{{minor}},value=${{ env.RELEASE_TAG }}
-            type=raw,value=latest,enable=${{ github.event_name == 'push' }}
+            type=raw,value=latest,enable=${{ inputs.latest }}
 
       - name: Build and push Docker image
         id: build-and-push

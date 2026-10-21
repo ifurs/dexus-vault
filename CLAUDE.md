@@ -27,8 +27,9 @@ docker/tests/start.sh down
 - Workflows pin actions to full commit SHAs with a version comment, use least-privilege `permissions`, `persist-credentials: false`, and pass `${{ }}` values to `run:` only through `env:`. `uvx zizmor@1.31.1 .github` must stay clean.
 - `tests/conftest.py::FakeDex` must behave like real Dex; fix it first when Dex is found to behave differently.
 - Every behavior change ships with a test; source, Dex or CLI-loop changes also with an integration test.
+- Releases happen only by merging a pull request that bumps `dexus_vault/__version__.py` (see README "Releasing"); never create or push tags.
 - Do not commit, push or open PRs unless asked.
 
 ## Agents and skills
 
-`.claude/agents/`: `dexus-researcher` (upstream facts), `dexus-developer` (changes), `dexus-tester` (tests), `dexus-reviewer` (independent review of a diff). Skills in `.claude/skills/`: `dex-api` (Dex semantics reference), `dexus-verify` (the verification gate), `/upgrade-dex-api <tag>` (Dex API upgrade workflow). Agent guard hooks live in `scripts/agents/guard.py`.
+`.claude/agents/`: `dexus-researcher` (upstream facts), `dexus-developer` (changes), `dexus-tester` (tests), `dexus-reviewer` (independent review of a diff), `dexus-security-auditor` (security audit). Skills in `.claude/skills/`: `dex-api` (Dex semantics reference), `dexus-verify` (the verification gate), `/upgrade-dex-api <tag>` (Dex API upgrade workflow), `/security-audit` (scanner suite and threat model). Agent guard hooks live in `scripts/agents/guard.py`.

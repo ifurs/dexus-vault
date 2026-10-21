@@ -95,3 +95,24 @@ jobs:
           GH_TOKEN: ${{ github.token }}
       - name: Static analysis (bandit)
         run: uvx bandit@1.9.2 -q -r dexus_vault scripts -x dexus_vault/grpc_dexidp
+
+  release-preview:
+    name: Release preview
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          fetch-tags: true
+      - id: plan
+        name: Check the version against existing releases
+        run: scripts/release-plan.sh
+      - name: Announce the release this pull request makes
+        if: steps.plan.outputs.release == 'true'
+        env:
+          VERSION: ${{ steps.plan.outputs.version }}
+        run: |
+          echo "::notice title=Release::Merging this pull request releases $VERSION to PyPI, GitHub and Docker Hub"
+          echo "### Merging this pull request releases **$VERSION**" >> "$GITHUB_STEP_SUMMARY"
