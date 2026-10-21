@@ -22,6 +22,7 @@
 - [Pruning](#-pruning)
 - [Metrics](#-metrics)
 - [Running in Kubernetes](#-running-in-kubernetes)
+  - [EKS with the AWS SSM backend](#eks-with-the-aws-ssm-backend)
 - [Local testing](#-local-testing)
 - [Development](#-development)
 - [Upgrading from 0.3](#-upgrading-from-03)
@@ -307,7 +308,65 @@ containers:
 
 For a CronJob, add `args: ["--once"]`, the pod then fails when the sync fails.
 
-On EKS with the SSM backend, replace the Vault variables with `SECRETS_BACKEND=aws-ssm`, `SSM_PATH` and `AWS_REGION`, and give the service account an IAM role (IRSA or Pod Identity) with the policy above.
+### EKS with the AWS SSM backend
+
+No AWS keys are needed in the pod. Give its service account an IAM role with the [SSM policy](#aws-ssm-parameter-store), using either IRSA or EKS Pod Identity. boto3 picks up both automatically and refreshes the temporary credentials itself, including the rotated IRSA token.
+
+```yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: dexus-vault
+  namespace: dex
+  annotations:
+    # IRSA only; with Pod Identity leave this out and create an association instead
+    eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/dexus-vault
+---
+# in the Deployment's pod spec
+serviceAccountName: dexus-vault
+containers:
+  - name: dexus-vault
+    image: ifurs/dexus-vault:0.4.0
+    env:
+      - { name: SECRETS_BACKEND, value: "aws-ssm" }
+      - { name: SSM_PATH, value: "/dex/clients" }
+      - { name: AWS_REGION, value: "eu-west-1" }
+      - { name: DEX_GRPC_URL, value: "dex.dex.svc:5557" }
+    # ports, probes and securityContext as above
+```
+
+**IRSA:** the role's trust policy allows the cluster's OIDC provider for this service account:
+
+```json
+{
+  "Effect": "Allow",
+  "Principal": { "Federated": "arn:aws:iam::123456789012:oidc-provider/oidc.eks.eu-west-1.amazonaws.com/id/EXAMPLE" },
+  "Action": "sts:AssumeRoleWithWebIdentity",
+  "Condition": {
+    "StringEquals": {
+      "oidc.eks.eu-west-1.amazonaws.com/id/EXAMPLE:sub": "system:serviceaccount:dex:dexus-vault",
+      "oidc.eks.eu-west-1.amazonaws.com/id/EXAMPLE:aud": "sts.amazonaws.com"
+    }
+  }
+}
+```
+
+**Pod Identity:** install the `eks-pod-identity-agent` add-on. Trust `pods.eks.amazonaws.com` with `sts:AssumeRole` and `sts:TagSession`, then associate the role:
+
+```bash
+aws eks create-pod-identity-association --cluster-name my-cluster \
+  --namespace dex --service-account dexus-vault \
+  --role-arn arn:aws:iam::123456789012:role/dexus-vault
+```
+
+Things that commonly go wrong:
+
+- **Static keys win.** `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` in the pod environment take precedence over IRSA and Pod Identity, so leave them unset.
+- **Private clusters** need VPC interface endpoints: `ssm`, plus `sts` for IRSA or `eks-auth` for Pod Identity. If you use a custom SSM endpoint, set `SSM_ENDPOINT_URL`; `AWS_ENDPOINT_URL_STS` works for STS.
+- **Don't rely on the node role.** IMDSv2 with the default hop limit of 1 usually blocks pods from reaching it, so the sync fails with "Unable to locate credentials".
+- **Customer managed KMS keys** need `kms:Decrypt` for the role.
+
+The image works with `runAsNonRoot` and `readOnlyRootFilesystem`. Both credential paths were tested that way, against an emulated STS and Pod Identity agent.
 
 ## 💻 Local testing
 
