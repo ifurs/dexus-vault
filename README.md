@@ -333,6 +333,14 @@ black . && ruff check .
 
 The project uses [pre-commit](https://pre-commit.com/).
 
+For [Claude Code](https://claude.com/claude-code), [CLAUDE.md](CLAUDE.md) describes the architecture and invariants, and [.claude/agents](.claude/agents) defines three project agents:
+
+| agent | role |
+|:---|:---|
+| `dexus-researcher` | read-only; verifies upstream Dex, Vault/hvac, AWS and dependency behavior against tagged sources, keeps verified facts in project memory |
+| `dexus-developer` | implements changes along the existing seams, with tests, lint and docs |
+| `dexus-tester` | runs unit and integration suites on the local stack, reproduces bugs as failing tests, edits only tests |
+
 The Dex gRPC stubs in `dexus_vault/grpc_dexidp` are generated from [api.proto](https://github.com/dexidp/dex/blob/v2.46.0/api/v2/api.proto). To update them to another Dex release:
 
 ```bash
