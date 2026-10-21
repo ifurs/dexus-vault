@@ -333,13 +333,22 @@ black . && ruff check .
 
 The project uses [pre-commit](https://pre-commit.com/).
 
-For [Claude Code](https://claude.com/claude-code), [CLAUDE.md](CLAUDE.md) describes the architecture and invariants, and [.claude/agents](.claude/agents) defines three project agents:
+For [Claude Code](https://claude.com/claude-code), [CLAUDE.md](CLAUDE.md) holds the project rules, and `.claude/` defines project agents and skills:
 
-| agent | role |
+| agent | model | role |
+|:---|:---|:---|
+| `dexus-researcher` | opus | read-only; verifies upstream Dex, Vault/hvac, AWS and dependency behavior against tagged sources, keeps verified facts in project memory |
+| `dexus-developer` | opus | implements changes test-first along the existing seams; a Stop hook blocks it from finishing while lint or unit tests fail |
+| `dexus-tester` | sonnet | runs unit and integration suites against local endpoints only, reproduces bugs as failing tests; may edit test code only |
+| `dexus-reviewer` | opus | independent review of a diff in a fresh context, re-runs the checks, reports only correctness, security and requirement gaps |
+
+| skill | use |
 |:---|:---|
-| `dexus-researcher` | read-only; verifies upstream Dex, Vault/hvac, AWS and dependency behavior against tagged sources, keeps verified facts in project memory |
-| `dexus-developer` | implements changes along the existing seams, with tests, lint and docs |
-| `dexus-tester` | runs unit and integration suites on the local stack, reproduces bugs as failing tests, edits only tests |
+| `dex-api` | verified Dex RPC semantics and version matrix, preloaded into the agents |
+| `dexus-verify` | the verification gate: which checks to run for which change, and how to report evidence |
+| `/upgrade-dex-api <tag>` | step-by-step upgrade of the vendored Dex API |
+
+The hooks used by the agents are in [scripts/agents/guard.py](scripts/agents/guard.py), tested in `tests/test_agent_guard.py`.
 
 The Dex gRPC stubs in `dexus_vault/grpc_dexidp` are generated from [api.proto](https://github.com/dexidp/dex/blob/v2.46.0/api/v2/api.proto). To update them to another Dex release:
 
