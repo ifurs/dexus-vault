@@ -1,0 +1,59 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dexus-vault"
+dynamic = ["version"]
+description = "Synchronizer of Dex clients with secrets in Vault"
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [{ name = "ifurs" }]
+requires-python = ">=3.11"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Operating System :: OS Independent",
+    "Topic :: System :: Systems Administration :: Authentication/Directory",
+]
+dependencies = [
+    # generated stubs in grpc_dexidp require grpcio>=1.84 and protobuf 7.x
+    "grpcio~=1.84",
+    "protobuf>=7.35.1,<8",
+    "hvac~=2.4",
+    "prometheus_client~=0.26",
+    "pydantic~=2.14",
+    "pydantic-settings~=2.16",
+    "requests~=2.32",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=9", "black>=26", "ruff>=0.17", "grpcio-tools~=1.84"]
+
+[project.urls]
+Source = "https://github.com/ifurs/dexus-vault"
+
+[project.scripts]
+dexus-vault = "dexus_vault.cli:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "dexus_vault.__version__.__version__" }
+
+[tool.setuptools.packages.find]
+include = ["dexus_vault*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["integration: needs running Dex and Vault (docker/tests)"]
+
+[tool.ruff]
+extend-exclude = ["dexus_vault/grpc_dexidp"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B"]
+ignore = ["E501"]

@@ -1,33 +1,52 @@
-version: "3.8"
-services:
+# Local Dex + Vault for development and integration tests. Not for production:
+# Vault runs in dev mode (in-memory, unsealed, root token "root").
+name: dexus-vault-test
 
-  dexidp:
+services:
+  dex:
     image: dexidp/dex:v2.46.0
     volumes:
-      # - ./certs/:/etc/dex/certs/
-      - ./conf/dex.config.docker.yaml:/etc/dex/config.docker.yaml
+      - ./conf/dex.config.docker.yaml:/etc/dex/config.docker.yaml:ro
     ports:
       - "5556:5556"
       - "5557:5557"
-    networks:
-      - dexus_vault
+    healthcheck:
+      test: ["CMD", "nc", "-z", "127.0.0.1", "5557"]
+      interval: 2s
+      retries: 30
 
   vault:
     image: hashicorp/vault:2.2.0
-    container_name: vault
-    restart: always
     environment:
+      VAULT_DEV_ROOT_TOKEN_ID: root
+      VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
+      # for the vault CLI inside the container
       VAULT_ADDR: http://127.0.0.1:8200
-    volumes:
-      - ./conf/:/vault/config.d
-    ports:
-      - "8200:8200"
+      VAULT_TOKEN: root
     cap_add:
       - IPC_LOCK
-    command: server -config=/vault/config.d/vault.hcl
-    networks:
-      - dexus_vault
+    volumes:
+      - ./templ:/templ:ro
+    ports:
+      - "8200:8200"
+    healthcheck:
+      test: ["CMD", "vault", "status"]
+      interval: 2s
+      retries: 30
 
-networks:
-  dexus_vault:
-   name: dexus_vault
+  dexus-vault:
+    profiles: ["dexus"]
+    build:
+      context: ../..
+      dockerfile: docker/image/Dockerfile
+    env_file: .env
+    environment:
+      DEX_GRPC_URL: dex:5557
+      VAULT_ADDR: http://vault:8200
+    ports:
+      - "8000:8000"
+    depends_on:
+      dex:
+        condition: service_healthy
+      vault:
+        condition: service_healthy

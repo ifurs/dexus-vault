@@ -1,0 +1,67 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - run: pip install -r requirements-dev.txt
+      - run: black --check .
+      - run: ruff check .
+
+  test:
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: pip install -c requirements.txt -e . pytest
+      - run: pytest
+
+  integration:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - run: pip install -c requirements.txt -e . pytest
+      - name: Start Dex and Vault
+        run: docker compose -f docker/tests/docker-compose.yaml up -d --wait dex vault
+      - run: pytest tests/integration -v
+        env:
+          DEXUS_INTEGRATION: "1"
+      - name: Service logs
+        if: failure()
+        run: docker compose -f docker/tests/docker-compose.yaml logs
+
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - run: pip install build && python -m build
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: docker/image/Dockerfile
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

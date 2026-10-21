@@ -1,27 +1,18 @@
-# Use an official Python runtime as a parent image
-FROM python:3.13-slim
+# Build from the repository root:
+#   docker build -f docker/image/Dockerfile .
+ARG PYTHON_VERSION=3.13
 
-# Set environment variables
-ARG VERSION
-ARG BUILD_DATE
-ARG VCS_REF
+FROM python:${PYTHON_VERSION}-slim AS build
+WORKDIR /src
+COPY pyproject.toml requirements.txt README.md LICENSE ./
+COPY dexus_vault ./dexus_vault
+RUN pip wheel --no-cache-dir --wheel-dir /wheels --constraint requirements.txt .
 
-# Install dexus-vault
-RUN pip install --no-cache-dir dexus-vault==$VERSION
+FROM python:${PYTHON_VERSION}-slim
+RUN --mount=type=bind,from=build,source=/wheels,target=/wheels \
+    pip install --no-cache-dir --no-index /wheels/*.whl
 
-# Set metadata for the image
-LABEL maintainer="ifurs" \
-    org.label-schema.build-date=$BUILD_DATE \
-    org.label-schema.name="dexus-vault" \
-    org.label-schema.description="Synchronizer of Dex clients with secrets in Vault" \
-    org.label-schema.version=$VERSION \
-    org.label-schema.url="https://github.com/ifurs/dexus-vault/docker/image/" \
-    org.label-schema.license="Apache-2.0" \
-    org.label-schema.vcs-ref=$VCS_REF \
-    org.label-schema.vcs-url="https://github.com/ifurs/dexus-vault/" \
-    org.label-schema.vcs-type="Git" \
-    org.label-schema.vendor="ifurs" \
-    org.label-schema.schema-version="1.0"
-
-# Define the command to run when the container starts
+# unprivileged user, the image needs no write access
+USER 65532:65532
+EXPOSE 8000
 ENTRYPOINT ["dexus-vault"]

@@ -1,0 +1,7 @@
+*
+!pyproject.toml
+!requirements.txt
+!README.md
+!LICENSE
+!dexus_vault/
+**/__pycache__

@@ -1,9 +1,12 @@
 {
     "id": "client1",
-    "logo_url": "https://picsum.photos/200/300",
+    "secret": "some_pass",
     "name": "client1",
+    "logo_url": "https://picsum.photos/200/300",
     "public": false,
     "redirect_uris": ["http://127.0.0.1:5000/callback"],
-    "secret": "some_pass",
-    "trusted_peers": "client2"
+    "trusted_peers": "client2",
+    "allowed_connectors": ["mock"],
+    "post_logout_redirect_uris": ["http://127.0.0.1:5000/"],
+    "refresh_token_lifetime": "session"
 }
