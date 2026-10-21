@@ -2,7 +2,7 @@ import pytest
 
 from dexus_vault.dex import DexError
 from dexus_vault.models import Client
-from dexus_vault.vault import SecretEntry
+from dexus_vault.sources import SecretEntry
 
 
 class FakeDex:

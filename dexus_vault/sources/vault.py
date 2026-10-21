@@ -3,7 +3,6 @@ Reads Dex client definitions from a Vault KV secrets engine.
 """
 
 import threading
-from dataclasses import dataclass
 from typing import Any
 
 import hvac
@@ -12,26 +11,14 @@ import requests
 
 from dexus_vault.config import VaultConfig
 from dexus_vault.log import logger
+from dexus_vault.sources import SecretEntry, SourceError
 
 # auth methods that obtain their own token and can log in again when it expires
 LOGIN_METHODS = ("approle", "kubernetes", "ldap", "cert")
 
 
-class VaultError(Exception):
+class VaultError(SourceError):
     pass
-
-
-@dataclass
-class SecretEntry:
-    """
-    One secret under VAULT_CLIENTS_PATH. `data` is None when the secret is
-    deleted (KV v2 soft delete) or could not be read, in which case `error`
-    is set.
-    """
-
-    key: str
-    data: dict[str, Any] | None
-    error: str | None = None
 
 
 def _read_file(path: str) -> str:
@@ -40,6 +27,8 @@ def _read_file(path: str) -> str:
 
 
 class VaultSource:
+    name = "vault"
+
     def __init__(self, config: VaultConfig, stop: threading.Event | None = None):
         self.config = config
         self.auth_method = self._select_auth_method()

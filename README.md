@@ -4,7 +4,7 @@
 ![Python](https://img.shields.io/badge/python-v3.11+-blue.svg)
 ![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)
 
-## **dexus-vault** - synchronizer of Dex clients with secrets in Vault
+## **dexus-vault** - synchronizer of Dex clients with secrets in Vault or AWS SSM
 
 ## 🚩 Table of Contents
 
@@ -17,6 +17,7 @@
   - [Metrics and health](#metrics-and-health)
   - [Dex connection](#dex-connection)
   - [Vault connection](#vault-connection)
+  - [AWS SSM Parameter Store](#aws-ssm-parameter-store)
 - [Vault secret structure](#-vault-secret-structure)
 - [Pruning](#-pruning)
 - [Metrics](#-metrics)
@@ -28,27 +29,28 @@
 
 ## 🚀 About the project
 
-Dexus Vault keeps the OAuth2 clients of [Dex](https://dexidp.io) in sync with secrets stored in HashiCorp Vault.
-Vault is the source of truth: every secret under a path describes one Dex client.
+Dexus Vault keeps the OAuth2 clients of [Dex](https://dexidp.io) in sync with secrets stored in HashiCorp Vault or in AWS Systems Manager Parameter Store.
+The secret backend is the source of truth: every secret under a path describes one Dex client.
 
 ### How it works
 
 Every `SYNC_INTERVAL` seconds dexus-vault:
 
-1. lists and reads the secrets under `VAULT_MOUNT_POINT`/`VAULT_CLIENTS_PATH`, and validates each one as a client;
+1. lists and reads the secrets under `VAULT_MOUNT_POINT`/`VAULT_CLIENTS_PATH` (or the parameters under `SSM_PATH`), and validates each one as a client;
 2. fetches each client from Dex over gRPC and compares them;
 3. applies the difference:
    - missing clients are **created**;
    - changed clients are **updated in place** with `UpdateClient`;
    - clients are **recreated** (deleted and created again) only when Dex cannot update the change in place: a new `secret`, a change of `public`, or clearing a list/name/logo;
-   - with [pruning](#-pruning) enabled, clients that are no longer in Vault are **deleted**.
+   - with [pruning](#-pruning) enabled, clients that are no longer in the backend are **deleted**.
 
 Secrets that are invalid, or that define the same client id twice, are reported and their clients are left untouched.
 
 ## 💾 Installation
 
 ```bash
-pip install dexus-vault
+pip install dexus-vault          # Vault backend
+pip install 'dexus-vault[aws]'   # adds the AWS SSM backend (boto3)
 ```
 
 or with Docker:
@@ -57,7 +59,7 @@ or with Docker:
 docker run --env-file .env ifurs/dexus-vault
 ```
 
-See the [image README](docker/image/README.md).
+The image includes both backends. See the [image README](docker/image/README.md).
 
 ## 📙 Usage
 
@@ -74,7 +76,8 @@ All options:
 ```text
 --once                    run one sync and exit, non-zero on errors (SYNC_ONCE)
 --dry-run                 log changes without applying them (SYNC_DRY_RUN)
---prune, --no-prune       delete Dex clients missing in Vault (SYNC_PRUNE)
+--prune, --no-prune       delete Dex clients missing in the source (SYNC_PRUNE)
+--backend {vault,aws-ssm} where clients are read from (SECRETS_BACKEND)
 --interval INTERVAL       seconds between syncs (SYNC_INTERVAL)
 --log-level LOG_LEVEL     log level (LOG_LEVEL)
 --log-format {text,json}  log format (LOG_FORMAT)
@@ -91,10 +94,11 @@ Settings are read from environment variables and from a `.env` file in the worki
 
 | variable | default | description |
 |:---|:---:|:---|
+| SECRETS_BACKEND | vault | `vault` or `aws-ssm` |
 | SYNC_INTERVAL | 60 | Seconds between syncs |
 | SYNC_ONCE | false | Run one sync and exit |
 | SYNC_DRY_RUN | false | Log planned changes without applying them |
-| SYNC_PRUNE | false | Delete Dex clients that are not defined in Vault, see [Pruning](#-pruning) |
+| SYNC_PRUNE | false | Delete Dex clients that are not defined in the backend, see [Pruning](#-pruning) |
 | SYNC_PRUNE_PREFIX | - | Only prune clients whose id starts with this prefix |
 | SYNC_PRUNE_EXCLUDE | - | Comma-separated client ids that are never pruned |
 | LOG_LEVEL | INFO | DEBUG, INFO, WARNING, ERROR or CRITICAL |
@@ -173,9 +177,47 @@ path "kv/data/dex/*" {
 
 For KV v1 grant `list` and `read` on `kv/dex/*`.
 
+### AWS SSM Parameter Store
+
+Set `SECRETS_BACKEND=aws-ssm` (or `--backend aws-ssm`) and install the `aws` extra. Every parameter **directly** under `SSM_PATH` is one client; its value is the same JSON object as a [Vault secret](#-vault-secret-structure), and the parameter name below the path is the default client id. Use `SecureString` parameters, they are decrypted on read.
+
+| variable | required | default | description |
+|:---|:---:|:---:|:---|
+| SSM_PATH | yes | - | Parameter path, e.g. `/dex/clients` |
+| AWS_REGION | - | from the AWS config | Region of the parameters |
+| AWS_PROFILE | - | - | Shared config / SSO profile |
+| SSM_ENDPOINT_URL | - | - | Custom endpoint, e.g. a VPC endpoint or a local emulator |
+| SSM_TIMEOUT | - | 10 | Connect and read timeout in seconds |
+| SSM_MAX_RETRIES | - | 5 | Attempts per request, throttling is retried |
+| AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN | - | - | Static credentials, normally not needed |
+
+Credentials come from the standard AWS chain: environment variables, shared config and SSO profiles, web identity (EKS IRSA), EKS Pod Identity, or the ECS/EC2 instance role. The explicit `AWS_*` key settings exist so credentials can also come from a `.env` file.
+
+```bash
+aws ssm put-parameter --type SecureString --name /dex/clients/my-app \
+  --value '{"secret": "a-long-random-secret", "redirect_uris": ["https://app.example.com/callback"]}'
+```
+
+Minimal IAM policy:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "ssm:GetParametersByPath",
+      "Resource": "arn:aws:ssm:eu-west-1:123456789012:parameter/dex/clients"
+    }
+  ]
+}
+```
+
+The default `aws/ssm` KMS key lets every principal in the account decrypt. With a customer managed key, also allow `kms:Decrypt` on that key. Parameters whose value is not a JSON object are reported, and pruning is skipped until they are fixed. Nested parameters (`/dex/clients/team/app`) are ignored.
+
 ## 🔒 Vault secret structure
 
-Each secret under `VAULT_CLIENTS_PATH` is one client. All fields of the Dex client API are supported:
+Each secret under `VAULT_CLIENTS_PATH` (or parameter under `SSM_PATH`) is one client. All fields of the Dex client API are supported:
 
 ```json
 {
@@ -203,7 +245,7 @@ Each secret under `VAULT_CLIENTS_PATH` is one client. All fields of the Dex clie
 
 ## ✂️ Pruning
 
-With `SYNC_PRUNE=true` (or `--prune`) clients that exist in Dex but not in Vault are deleted. Dex clients carry no owner label, so limit the scope:
+With `SYNC_PRUNE=true` (or `--prune`) clients that exist in Dex but not in the backend are deleted. Dex clients carry no owner label, so limit the scope:
 
 - `SYNC_PRUNE_PREFIX=vault-` only touches clients whose id starts with `vault-`;
 - `SYNC_PRUNE_EXCLUDE=admin-ui,cli` never touches the listed ids.
@@ -211,7 +253,7 @@ With `SYNC_PRUNE=true` (or `--prune`) clients that exist in Dex but not in Vault
 Safety rules, a sync never prunes when:
 
 - some secret could not be read or some client could not be checked in Dex, since the picture is incomplete;
-- Vault returned no clients at all (for example a wrong `VAULT_CLIENTS_PATH`);
+- the backend returned no clients at all (for example a wrong `VAULT_CLIENTS_PATH` or `SSM_PATH`);
 - the client belongs to an invalid or duplicated secret.
 
 Static clients from the Dex config file cannot be deleted through the API; the first attempt is logged and they are skipped afterwards. Try `--dry-run --prune --once` first to see what would be deleted.
@@ -227,9 +269,9 @@ Served at `http://<METRICS_ADDR>:<METRICS_PORT>/metrics`:
 | `dexus_vault_sync_duration_seconds` | histogram | Duration of a sync run |
 | `dexus_vault_last_sync_timestamp_seconds` | gauge | Time of the last sync run |
 | `dexus_vault_last_success_timestamp_seconds` | gauge | Time of the last sync without errors |
-| `dexus_vault_clients` | gauge | Valid clients defined in Vault |
+| `dexus_vault_clients` | gauge | Valid clients defined in the backend |
 | `dexus_vault_invalid_secrets` | gauge | Secrets that are not valid client definitions |
-| `dexus_vault_build_info{version}` | gauge | Build information |
+| `dexus_vault_build_info{version, backend}` | gauge | Build information and the active backend |
 
 Example alert: `time() - dexus_vault_last_success_timestamp_seconds > 600`.
 
@@ -265,13 +307,16 @@ containers:
 
 For a CronJob, add `args: ["--once"]`, the pod then fails when the sync fails.
 
+On EKS with the SSM backend, replace the Vault variables with `SECRETS_BACKEND=aws-ssm`, `SSM_PATH` and `AWS_REGION`, and give the service account an IAM role (IRSA or Pod Identity) with the policy above.
+
 ## 💻 Local testing
 
-[docker/tests](docker/tests/README.md) has a Docker Compose stack with Dex and a Vault dev server, sample clients and a restricted policy:
+[docker/tests](docker/tests/README.md) has a Docker Compose stack with Dex, a Vault dev server and an AWS SSM emulator ([moto](https://github.com/getmoto/moto)), sample clients and a restricted Vault policy:
 
 ```bash
 docker/tests/start.sh up
-dexus-vault --env-file docker/tests/.env
+dexus-vault --env-file docker/tests/.env       # Vault
+dexus-vault --env-file docker/tests/.env.ssm   # AWS SSM
 docker/tests/start.sh down
 ```
 
@@ -280,7 +325,7 @@ It is not suitable for production.
 ## 🛠 Development
 
 ```bash
-pip install -r requirements-dev.txt -e .
+pip install -r requirements-dev.txt -e ".[aws]"
 pytest                                  # unit tests
 docker/tests/start.sh up && DEXUS_INTEGRATION=1 pytest tests/integration
 black . && ruff check .
@@ -313,7 +358,8 @@ scripts/generate_proto.sh v2.46.0
 - [x] Structured (JSON) logs
 - [ ] Generate missing client secrets and write them back to Vault
 - [ ] Read clients from several Vault paths, recursively
-- [ ] Support other secret sources
+- [x] AWS SSM Parameter Store backend
+- [ ] AWS Secrets Manager and other secret backends
 
 ## 🔥 Thanks
 

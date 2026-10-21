@@ -7,7 +7,7 @@ field (case-insensitive), or from a `.env` file in the working directory.
 
 from typing import Annotated, Any, Literal
 
-from pydantic import AliasChoices, BeforeValidator, Field, SecretStr
+from pydantic import AliasChoices, BeforeValidator, Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
@@ -45,6 +45,8 @@ class _Settings(BaseSettings):
 
 
 class GeneralConfig(_Settings):
+    # where client definitions are read from
+    secrets_backend: Literal["vault", "aws-ssm"] = "vault"
     log_level: LogLevel = "INFO"
     log_format: Literal["text", "json"] = "text"
     sync_interval: int = Field(default=60, ge=1)
@@ -120,3 +122,32 @@ class VaultConfig(_Settings):
     vault_cert_key: str | None = None
     vault_cert_role: str = ""
     vault_cert_mount_point: str = "cert"
+
+
+class SsmConfig(_Settings):
+    """
+    AWS Systems Manager Parameter Store. Credentials come from the standard
+    AWS chain: environment, shared config/SSO profile, web identity (IRSA),
+    EKS Pod Identity or the instance profile.
+    """
+
+    # parameter path holding one JSON parameter per client, e.g. /dex/clients
+    ssm_path: str
+    aws_region: str | None = None
+    aws_profile: str | None = None
+    # static credentials, only needed when the AWS chain cannot provide them
+    # (e.g. set in a .env file, which boto3 does not read)
+    aws_access_key_id: str | None = None
+    aws_secret_access_key: SecretStr | None = None
+    aws_session_token: SecretStr | None = None
+    # custom endpoint, e.g. a VPC endpoint or a local emulator
+    ssm_endpoint_url: str | None = None
+    ssm_timeout: float = Field(default=10, gt=0)
+    ssm_max_retries: int = Field(default=5, ge=1)
+
+    @field_validator("ssm_path")
+    @classmethod
+    def _absolute_path(cls, value: str) -> str:
+        if not value.startswith("/"):
+            raise ValueError("must start with '/', e.g. /dex/clients")
+        return value.rstrip("/") or "/"

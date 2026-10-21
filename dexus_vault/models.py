@@ -22,7 +22,7 @@ import dexus_vault.grpc_dexidp.dexidp.api_pb2 as pb2
 
 def _to_list(value: Any) -> Any:
     """
-    Lists may be stored in Vault as native JSON lists, as JSON encoded
+    Lists may be stored as native JSON lists, as JSON encoded
     strings ('["a", "b"]') or as comma separated strings ("a,b").
     """
     if value is None:
@@ -79,7 +79,7 @@ class Client(BaseModel):
     @model_validator(mode="after")
     def _confidential_needs_secret(self) -> "Client":
         # Dex generates a random secret for confidential clients created with
-        # an empty one, which would never match Vault and recreate it forever
+        # an empty one, which would never match the source and recreate it forever
         if not self.public and not self.secret.get_secret_value():
             raise ValueError("a non-public client requires a non-empty 'secret'")
         return self
@@ -152,7 +152,7 @@ def _comparable(client: Client, field: str) -> Any:
 
 def changed_fields(desired: Client, actual: Client, extended: bool = True) -> list[str]:
     """
-    Names of the fields that differ between Vault (desired) and Dex (actual).
+    Names of the fields that differ between the source (desired) and Dex (actual).
     With extended=False, fields unknown to older Dex servers are ignored.
     """
     changed = []

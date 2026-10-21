@@ -6,7 +6,7 @@ FROM python:${PYTHON_VERSION}-slim AS build
 WORKDIR /src
 COPY pyproject.toml requirements.txt README.md LICENSE ./
 COPY dexus_vault ./dexus_vault
-RUN pip wheel --no-cache-dir --wheel-dir /wheels --constraint requirements.txt .
+RUN pip wheel --no-cache-dir --wheel-dir /wheels --constraint requirements.txt ".[aws]"
 
 FROM python:${PYTHON_VERSION}-slim
 RUN --mount=type=bind,from=build,source=/wheels,target=/wheels \

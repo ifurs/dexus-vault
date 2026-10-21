@@ -15,8 +15,8 @@ import pytest
 
 from dexus_vault.config import DexConfig, VaultConfig
 from dexus_vault.dex import DexAPI
+from dexus_vault.sources.vault import VaultSource
 from dexus_vault.sync import Syncer, SyncOptions
-from dexus_vault.vault import VaultSource
 
 pytestmark = [
     pytest.mark.integration,

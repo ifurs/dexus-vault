@@ -30,7 +30,12 @@ disable_created_metrics()
 
 
 class Metrics:
-    def __init__(self, sync_interval: int, internal_metrics: bool = False):
+    def __init__(
+        self,
+        sync_interval: int,
+        internal_metrics: bool = False,
+        backend: str = "vault",
+    ):
         self.sync_interval = sync_interval
         self.last_success: float | None = None
         self.registry = registry = CollectorRegistry()
@@ -44,7 +49,7 @@ class Metrics:
             "dexus-vault build information",
             namespace=NAMESPACE,
             registry=registry,
-        ).info({"version": __version__})
+        ).info({"version": __version__, "backend": backend})
         self.operations = Counter(
             "client_operations",
             "Client operations applied to Dex",
@@ -79,13 +84,13 @@ class Metrics:
         )
         self.clients = Gauge(
             "clients",
-            "Valid clients defined in Vault",
+            "Valid clients defined in the source",
             namespace=NAMESPACE,
             registry=registry,
         )
         self.invalid_secrets = Gauge(
             "invalid_secrets",
-            "Secrets in Vault that are not valid client definitions",
+            "Secrets in the source that are not valid client definitions",
             namespace=NAMESPACE,
             registry=registry,
         )

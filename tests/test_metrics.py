@@ -53,4 +53,4 @@ def test_counters_accumulate_across_syncs(server):
     assert 'dexus_vault_syncs_total{result="success"} 2.0' in body
     assert "dexus_vault_clients 3.0" in body
     assert "dexus_vault_invalid_secrets 1.0" in body
-    assert 'dexus_vault_build_info{version="' in body
+    assert 'dexus_vault_build_info{backend="vault",version="' in body

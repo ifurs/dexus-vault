@@ -1,5 +1,6 @@
-# Local Dex + Vault for development and integration tests. Not for production:
-# Vault runs in dev mode (in-memory, unsealed, root token "root").
+# Local Dex, Vault and an AWS SSM emulator (moto) for development and
+# integration tests. Not for production: Vault runs in dev mode (in-memory,
+# unsealed, root token "root") and moto accepts any credentials.
 name: dexus-vault-test
 
 services:
@@ -31,6 +32,18 @@ services:
       - "8200:8200"
     healthcheck:
       test: ["CMD", "vault", "status"]
+      interval: 2s
+      retries: 30
+
+  # AWS API emulator for the aws-ssm backend
+  ssm:
+    image: motoserver/moto:5.2.4
+    volumes:
+      - ./templ:/templ:ro
+    ports:
+      - "5050:5000"
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://127.0.0.1:5000/moto-api/"]
       interval: 2s
       retries: 30
 

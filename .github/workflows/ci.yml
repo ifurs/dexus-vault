@@ -29,7 +29,7 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
-      - run: pip install -c requirements.txt -e . pytest
+      - run: pip install -c requirements.txt -e ".[aws]" pytest
       - run: pytest
 
   integration:
@@ -39,9 +39,9 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
-      - run: pip install -c requirements.txt -e . pytest
-      - name: Start Dex and Vault
-        run: docker compose -f docker/tests/docker-compose.yaml up -d --wait dex vault
+      - run: pip install -c requirements.txt -e ".[aws]" pytest
+      - name: Start Dex, Vault and the SSM emulator
+        run: docker compose -f docker/tests/docker-compose.yaml up -d --wait dex vault ssm
       - run: pytest tests/integration -v
         env:
           DEXUS_INTEGRATION: "1"

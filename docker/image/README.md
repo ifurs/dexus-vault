@@ -4,7 +4,7 @@
 ![Python](https://img.shields.io/badge/python-v3.11+-blue.svg)
 ![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)
 
-## **dexus-vault** - synchronizer of Dex clients with secrets in Vault
+## **dexus-vault** - synchronizer of Dex clients with secrets in Vault or AWS SSM
 
 ## Usage
 
@@ -24,7 +24,15 @@ VAULT_APPROLE_ROLE_ID=...
 VAULT_APPROLE_SECRET_PATH=/vault/secrets/secret-id
 ```
 
-The image runs as uid 65532 and serves `/metrics`, `/healthz` and `/readyz` on port 8000.
+For AWS SSM Parameter Store instead of Vault:
+
+```sh
+SECRETS_BACKEND=aws-ssm
+SSM_PATH=/dex/clients
+AWS_REGION=eu-west-1
+```
+
+The image includes both backends, runs as uid 65532 and serves `/metrics`, `/healthz` and `/readyz` on port 8000.
 Images are published for `linux/amd64` and `linux/arm64`.
 
 Build it from the repository root:

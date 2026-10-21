@@ -11,12 +11,19 @@ import time
 from pydantic import ValidationError
 
 from dexus_vault.__version__ import __description__, __title__, __version__
-from dexus_vault.config import DexConfig, GeneralConfig, MetricsConfig, VaultConfig
+from dexus_vault.config import (
+    DexConfig,
+    GeneralConfig,
+    MetricsConfig,
+    SsmConfig,
+    VaultConfig,
+)
 from dexus_vault.dex import DexAPI, DexError
 from dexus_vault.log import logger, setup_logging
 from dexus_vault.metrics import Metrics, start_http_server
+from dexus_vault.sources import SecretSource, SourceError
+from dexus_vault.sources.vault import VaultSource
 from dexus_vault.sync import Syncer, SyncOptions
-from dexus_vault.vault import VaultError, VaultSource
 
 EXIT_OK = 0
 EXIT_FAILURE = 1
@@ -46,7 +53,12 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
         "--prune",
         action=argparse.BooleanOptionalAction,
         default=None,
-        help="delete Dex clients missing in Vault (SYNC_PRUNE)",
+        help="delete Dex clients missing in the source (SYNC_PRUNE)",
+    )
+    parser.add_argument(
+        "--backend",
+        choices=["vault", "aws-ssm"],
+        help="where clients are read from (SECRETS_BACKEND, default: vault)",
     )
     parser.add_argument(
         "--interval", type=int, help="seconds between syncs (SYNC_INTERVAL)"
@@ -69,6 +81,7 @@ def _overrides(args: argparse.Namespace) -> dict:
         "sync_interval": args.interval,
         "log_level": args.log_level,
         "log_format": args.log_format,
+        "secrets_backend": args.backend,
     }
     return {key: value for key, value in values.items() if value is not None}
 
@@ -82,11 +95,22 @@ def _install_signal_handlers(stop: threading.Event) -> None:
     signal.signal(signal.SIGINT, handler)
 
 
+def build_source(
+    config: VaultConfig | SsmConfig, stop: threading.Event
+) -> SecretSource:
+    if isinstance(config, SsmConfig):
+        # boto3 is optional, only import it when the backend is used
+        from dexus_vault.sources.aws_ssm import SsmSource
+
+        return SsmSource(config)
+    return VaultSource(config, stop)
+
+
 def run(
     general: GeneralConfig,
     metrics_config: MetricsConfig,
     dex_config: DexConfig,
-    vault_config: VaultConfig,
+    source_config: VaultConfig | SsmConfig,
     stop: threading.Event,
 ) -> int:
     options = SyncOptions(
@@ -105,8 +129,12 @@ def run(
         )
         logger.warning(f"Pruning enabled for {scope}")
 
-    metrics = Metrics(general.sync_interval, metrics_config.internal_metrics)
-    dex = vault = server = None
+    metrics = Metrics(
+        general.sync_interval,
+        metrics_config.internal_metrics,
+        backend=general.secrets_backend,
+    )
+    dex = source = server = None
     try:
         if metrics_config.metrics_enable and not general.sync_once:
             try:
@@ -124,17 +152,17 @@ def run(
             )
         dex = DexAPI(dex_config)
         dex.wait_ready(stop)
-        vault = VaultSource(vault_config, stop)
-        vault.connect()
-        syncer = Syncer(dex, vault, options)
+        source = build_source(source_config, stop)
+        source.connect()
+        syncer = Syncer(dex, source, options)
 
         while not stop.is_set():
             started = time.monotonic()
             report = None
             try:
-                vault.ensure_session(min_ttl=2 * general.sync_interval)
+                source.ensure_session(min_ttl=2 * general.sync_interval)
                 report = syncer.run_once()
-            except (DexError, VaultError) as error:
+            except (DexError, SourceError) as error:
                 logger.error(f"Sync failed: {error}")
             except Exception:
                 logger.exception("Sync failed with an unexpected error")
@@ -146,15 +174,15 @@ def run(
             stop.wait(general.sync_interval)
         return EXIT_OK
 
-    except (DexError, VaultError, OSError) as error:
+    except (DexError, SourceError, OSError) as error:
         if stop.is_set():
             # shutdown requested while still starting up
             return EXIT_OK
         logger.error(str(error))
         return EXIT_FAILURE
     finally:
-        if vault is not None:
-            vault.close()
+        if source is not None:
+            source.close()
         if dex is not None:
             dex.close()
         if server is not None:
@@ -167,7 +195,11 @@ def main(argv: list[str] | None = None) -> int:
         general = GeneralConfig(_env_file=args.env_file, **_overrides(args))
         metrics_config = MetricsConfig(_env_file=args.env_file)
         dex_config = DexConfig(_env_file=args.env_file)
-        vault_config = VaultConfig(_env_file=args.env_file)
+        source_config = (
+            SsmConfig(_env_file=args.env_file)
+            if general.secrets_backend == "aws-ssm"
+            else VaultConfig(_env_file=args.env_file)
+        )
     except ValidationError as error:
         # without input values, they may hold tokens or passwords
         problems = "\n".join(
@@ -181,4 +213,4 @@ def main(argv: list[str] | None = None) -> int:
     logger.info(f"Starting {__title__} {__version__}")
     stop = threading.Event()
     _install_signal_handlers(stop)
-    return run(general, metrics_config, dex_config, vault_config, stop)
+    return run(general, metrics_config, dex_config, source_config, stop)

@@ -13,13 +13,9 @@ from pydantic import ValidationError
 from dexus_vault.dex import DexError
 from dexus_vault.log import logger
 from dexus_vault.models import Client, changed_fields, needs_recreate
-from dexus_vault.vault import SecretEntry
+from dexus_vault.sources import SecretEntry, SecretSource
 
 Operation = Literal["create", "update", "recreate", "delete"]
-
-
-class SecretSource(Protocol):
-    def read_secrets(self) -> list[SecretEntry]: ...
 
 
 class DexBackend(Protocol):
@@ -217,7 +213,7 @@ class Syncer:
             logger.warning("Skipping prune, some clients could not be read or checked")
             return []
         if not state.clients and not state.protected:
-            logger.warning("Skipping prune, no clients found in Vault")
+            logger.warning("Skipping prune, no clients found in the source")
             return []
         try:
             existing = self.dex.list_client_ids()

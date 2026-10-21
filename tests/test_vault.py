@@ -4,7 +4,8 @@ import hvac.exceptions
 import pytest
 
 from dexus_vault.config import VaultConfig
-from dexus_vault.vault import SecretEntry, VaultError, VaultSource
+from dexus_vault.sources import SecretEntry
+from dexus_vault.sources.vault import VaultError, VaultSource
 
 
 def config(**kwargs):
@@ -52,7 +53,7 @@ def test_client_options_are_wired():
             vault_request_timeout=7,
         )
     )
-    with mock.patch("dexus_vault.vault.hvac.Client") as client_cls:
+    with mock.patch("dexus_vault.sources.vault.hvac.Client") as client_cls:
         source._new_client()
     kwargs = client_cls.call_args.kwargs
     assert kwargs["namespace"] == "team"

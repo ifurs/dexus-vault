@@ -1,6 +1,6 @@
 from dexus_vault.models import Client
+from dexus_vault.sources import SecretEntry
 from dexus_vault.sync import Syncer, SyncOptions, collect_desired
-from dexus_vault.vault import SecretEntry
 
 from .conftest import FakeDex
 
