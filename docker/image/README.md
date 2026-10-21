@@ -8,17 +8,29 @@
 
 ## Usage
 
-Provide env vars for that image with your configuration of Dex and Vault, example env:
-
 ```sh
-SYNC_INTERVAL=20
-LOG_LEVEL="DEBUG"
-DEX_GRPC_URL="127.0.0.1:5557"
-VAULT_ADDR="https://127.0.0.1:8200"
-# example for path kv/dex/*
-VAULT_MOUNT_POINT="kv"
-VAULT_CLIENTS_PATH="dex"
-VAULT_APPROLE=true
+docker run --env-file .env -p 8000:8000 ifurs/dexus-vault
+docker run --env-file .env ifurs/dexus-vault --once --dry-run
 ```
 
-For more configuration options check [README](https://github.com/ifurs/dexus-vault/README.md)
+Example `.env`, for clients stored at `kv/dex/*`:
+
+```sh
+DEX_GRPC_URL=dex:5557
+VAULT_ADDR=https://vault:8200
+VAULT_MOUNT_POINT=kv
+VAULT_CLIENTS_PATH=dex
+VAULT_APPROLE_ROLE_ID=...
+VAULT_APPROLE_SECRET_PATH=/vault/secrets/secret-id
+```
+
+The image runs as uid 65532 and serves `/metrics`, `/healthz` and `/readyz` on port 8000.
+Images are published for `linux/amd64` and `linux/arm64`.
+
+Build it from the repository root:
+
+```sh
+docker build -f docker/image/Dockerfile -t dexus-vault .
+```
+
+For all configuration options see the [README](https://github.com/ifurs/dexus-vault#-configuration).
