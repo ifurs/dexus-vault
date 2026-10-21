@@ -140,3 +140,70 @@ def test_verify_uses_uv_with_a_lockfile(tmp_path, monkeypatch):
     result = run("verify", {"stop_hook_active": False, "cwd": str(tmp_path)})
     assert result.returncode == 2
     assert "uv run --frozen black --check" in result.stderr
+
+
+def audit(command):
+    return run("bash-audit", {"tool_name": "Bash", "tool_input": {"command": command}})
+
+
+TRIVY = "aquasec/trivy:0.76.1@sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c"
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        f"docker run --rm -v /var/run/docker.sock:/var/run/docker.sock:ro -v trivy-cache:/root/.cache {TRIVY} image --quiet dexus-vault:audit",
+        'docker run --rm -v "$PWD":/repo:ro zricethezav/gitleaks:v8.30.1 git /repo --redact',
+        "docker run --rm -i hadolint/hadolint:v2.15.1 < docker/image/Dockerfile",
+        "docker build -q -f docker/image/Dockerfile -t dexus-vault:audit .",
+        f"docker build -q -f docker/image/Dockerfile -t dexus-vault:audit . && docker run --rm {TRIVY} image dexus-vault:audit",
+        "docker image rm -f dexus-vault:audit",
+        "uv audit --preview-features audit-command --frozen",
+        "uvx zizmor@1.31.1 --format plain .github",
+        "git log -p -- .github/workflows",
+    ],
+)
+def test_audit_allows_scanners(command):
+    result = audit(command)
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        # writable bind mount of the repository
+        'docker run --rm -v "$PWD":/repo zricethezav/gitleaks:v8.30.1 git /repo',
+        # not a scanner image
+        "docker run --rm -v /:/host:ro alpine cat /host/etc/shadow",
+        "docker run --rm --privileged aquasec/trivy:0.76.1 image x",
+        "docker run aquasec/trivy:0.76.1 image x",
+        "docker build -t ifurs/dexus-vault:latest --push .",
+        "docker image rm python:3.13-slim",
+        f"docker run --rm {TRIVY} image x && git push",
+        "docker compose up -d",
+        "rm -rf build",
+    ],
+)
+def test_audit_blocks_everything_else(command):
+    result = audit(command)
+    assert result.returncode == 2, command
+
+
+@pytest.mark.parametrize(
+    "mount",
+    [
+        '"$PWD":/repo',
+        "$PWD:/repo",
+        "/home:/h",
+        "./:/repo",
+        "~/.aws:/root/.aws",
+        "type=bind,src=/,dst=/h",
+    ],
+)
+def test_audit_requires_read_only_host_mounts(mount):
+    assert (
+        audit(
+            f"docker run --rm -v {mount} zricethezav/gitleaks:v8.30.1 git /repo"
+        ).returncode
+        == 2
+    )

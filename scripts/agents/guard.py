@@ -3,6 +3,7 @@
 Claude Code hook guards for the project agents in .claude/agents.
 
     guard.py bash-readonly   PreToolUse(Bash): block commands that change state
+    guard.py bash-audit      like bash-readonly, but allows the security scanners
     guard.py tests-only      PreToolUse(Edit|Write): allow edits under tests/ only
     guard.py verify          SubagentStop: block finishing while lint or tests fail
 
@@ -36,6 +37,55 @@ MUTATING = [
     r"(^|[^0-9&>])>>?\s*(?!/dev/null|&)[^\s&|;]",
 ]
 EDITABLE_PREFIXES = ("tests/", "docker/tests/templ/")
+
+# security scanner containers the audit agent may run, and the throwaway image it scans
+SCANNER_IMAGES = ("aquasec/trivy", "zricethezav/gitleaks", "hadolint/hadolint")
+AUDIT_IMAGE = "dexus-vault:audit"
+NAMED_VOLUME = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]*")
+SEGMENT_SPLIT = re.compile(r"\s*(?:&&|\|\||;|\|)\s*")
+
+
+def _scanner_run(segment: str) -> bool:
+    """
+    `docker run --rm` of a scanner image whose bind mounts are all read-only.
+    Named volumes (e.g. a trivy cache) are allowed, they never touch the host tree.
+    """
+    words = segment.split()
+    if words[:3] != ["docker", "run", "--rm"]:
+        return False
+    if not any(
+        word.startswith(f"{image}:") or word.startswith(f"{image}@")
+        for word in words
+        for image in SCANNER_IMAGES
+    ):
+        return False
+    for flag, value in zip(words, words[1:], strict=False):
+        if flag in ("-v", "--volume", "--mount"):
+            source = value.split(":", 1)[0]
+            # anything but a plain volume name is a host path and must be read-only
+            if not NAMED_VOLUME.fullmatch(source) and not value.endswith(":ro"):
+                return False
+        if flag in ("--privileged", "--pid", "--network") or flag.startswith(
+            "--cap-add"
+        ):
+            return False
+    return True
+
+
+def _audit_allowed(segment: str) -> bool:
+    words = segment.split()
+    if _scanner_run(segment):
+        return True
+    if (
+        words[:2] == ["docker", "build"]
+        and AUDIT_IMAGE in words
+        and "--push" not in words
+    ):
+        return True
+    return (
+        words[:3] in (["docker", "image", "rm"], ["docker", "rmi", AUDIT_IMAGE])
+        and words[-1] == AUDIT_IMAGE
+    )
 
 
 def _deny(reason: str) -> int:
@@ -118,7 +168,22 @@ def verify(event: dict) -> int:
     return 0
 
 
-MODES = {"bash-readonly": bash_readonly, "tests-only": tests_only, "verify": verify}
+def bash_audit(event: dict) -> int:
+    command = event.get("tool_input", {}).get("command", "")
+    remaining = " ; ".join(
+        segment
+        for segment in SEGMENT_SPLIT.split(command)
+        if not _audit_allowed(segment)
+    )
+    return bash_readonly({"tool_input": {"command": remaining}})
+
+
+MODES = {
+    "bash-readonly": bash_readonly,
+    "bash-audit": bash_audit,
+    "tests-only": tests_only,
+    "verify": verify,
+}
 
 
 def main(argv: list[str]) -> int:
