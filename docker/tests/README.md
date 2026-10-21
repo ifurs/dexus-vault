@@ -1,73 +1,55 @@
 # Local testing
 
-Docs about running local testing
+Docker Compose stack for development and the integration tests.
 
-> :warning: **Caution: Not suitable for production use**: This setup may contain vulnerabilities. Please use with discretion. :grin:
+> :warning: **Not suitable for production**: Vault runs in dev mode (in-memory, unsealed, root token `root`) and Dex gRPC has no TLS.
 
-## How to run it
+## Services
 
-run `docker-compose up -d` and do everything manually :neutral_face:
+| service | port | |
+|:---|:---|:---|
+| Dex | 5556 (web), 5557 (gRPC) | [conf/dex.config.docker.yaml](conf/dex.config.docker.yaml) |
+| Vault | 8200 | dev server, root token `root` |
+| SSM (moto) | 5050 | AWS API emulator, any credentials work |
+| dexus-vault | 8000 (metrics) | only with `--with-dexus`, built from this checkout |
 
-### Automated process
-
-simply run with your shell(tested on bash and zsh):
-
-```sh
-./start.sh up
-
-# with dexus_vault
-./start.sh up dexus_vault
-```
-
-also script can clean everything that was created(except images)
+## Usage
 
 ```sh
-./start.sh down
-
-# with dexus_vault
-./start.sh down dexus_vault
+./start.sh up                # start everything, load sample clients, write .env and .env.ssm
+./start.sh up --with-dexus   # same, and run dexus-vault in a container
+./start.sh seed              # load the sample clients again
+./start.sh down              # remove everything
 ```
 
-Here is going real magic :star2:! I'm kidding, that's just a shell script `start.sh` with sleep, that runs:
+`up` creates a KV v2 engine `kv`, writes [templ/client*.json](templ) to `kv/dex/`, creates a token limited by [templ/policy1.hcl](templ/policy1.hcl) and writes it to `.env`. It also writes the same clients as SecureString parameters under `/dex/clients` in the SSM emulator, with settings in `.env.ssm`. Then run dexus-vault from the repository root:
 
-1. docker-compose up for Dex and Vault services, by default they are accessible on localhost:
+```sh
+dexus-vault --env-file docker/tests/.env       # Vault backend
+dexus-vault --env-file docker/tests/.env.ssm   # AWS SSM backend
+```
 
-    - `5556` Dex Web port
-    - `5557` Dex GRPC port
-    - `8200` Vault UI and API
+Some sample clients are broken on purpose, to show how they are reported:
 
-2. configure Vault:
+| secret | result |
+|:---|:---|
+| client1 | valid, uses every field |
+| client2 | valid, minimal |
+| client3 | valid, id from the secret name, warns about the unknown `client_id` key |
+| client4 | valid public client, `public` given as a string |
+| client5 | invalid, no secret |
+| client6 | invalid, not a client at all |
 
-    - initialize
-    - unseal
-    - enable secrets kv called "kv"
+## Integration tests
 
-3. add samples to Vault:
+With the stack running:
 
-    - create client secrets under path `kv/dex`, some of them have wrong structure, just to show you exceptions
-    - create simple policy for read and list under `kv/dex` path, so if you want to view from UI, type full path, or change policy
-    - create token with policy from previous step
+```sh
+DEXUS_INTEGRATION=1 pytest tests/integration
+```
 
-4. (Optional) If you specify "dexus_vault" as second argument for script, it will also start dexus_vault latest container and start syncing Dex with Vault. You can skip next steps if you choose to run with dexus_vault, env file will be generated automatically
+The tests use the root token and the dev server's `secret/` engine, and random parameter paths in the SSM emulator, and clean up after themselves.
 
-5. After all steps above, you will get something like this:
+## TLS
 
-    ```sh
-        ______ Use this token to access client secrets in Vault _______
-        export VAULT_TOKEN=...
-    ```
-
-6. Generate env file(if run from source) or set in env next variables:
-
-    ```sh
-    VAULT_TOKEN=<token_from_step_5>
-    VAULT_ADDR=http://127.0.0.1:8200
-    VAULT_MOUNT_POINT=kv
-    VAULT_CLIENTS_PATH=dex
-    ```
-
-By default it enables Dex GRPC insecure, but still, you can use any cert gen script, like [this](https://github.com/dexidp/dex/tree/master/examples/grpc-client) to generate certs and add them to [docker-compose.yaml](docker-compose.yaml) and [dex.config.docker.yaml](conf/dex.config.docker.yaml)
-
-## Troubleshooting
-
-- `sh: permission denied: ./start.sh` simply add execute permissions for script `chmod +x start.sh`
+To try gRPC with mutual TLS, generate certificates (for example with [this script](https://github.com/dexidp/dex/tree/master/examples/grpc-client)), mount them into the `dex` service, set `tlsCert`, `tlsKey` and `tlsClientCA` in the Dex config, and set `DEX_CA_CRT`, `DEX_CLIENT_CRT` and `DEX_CLIENT_KEY` for dexus-vault.
