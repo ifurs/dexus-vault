@@ -1,1 +1,3 @@
-python-dotenv==1.0.1
+-r requirements.txt
+python-dotenv==1.2.4
+grpcio-tools==1.84.0

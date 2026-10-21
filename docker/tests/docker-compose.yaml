@@ -2,7 +2,7 @@ version: "3.8"
 services:
 
   dexidp:
-    image: dexidp/dex:v2.38.0
+    image: dexidp/dex:v2.46.0
     volumes:
       # - ./certs/:/etc/dex/certs/
       - ./conf/dex.config.docker.yaml:/etc/dex/config.docker.yaml
@@ -13,7 +13,7 @@ services:
       - dexus_vault
 
   vault:
-    image: hashicorp/vault:1.12.7
+    image: hashicorp/vault:2.2.0
     container_name: vault
     restart: always
     environment:

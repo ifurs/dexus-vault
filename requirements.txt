@@ -1,9 +1,7 @@
-grpcio==1.62.0
-grpcio-tools==1.60.1
-googleapis-common-protos==1.62.0
-grpcio-status==1.62.0
-protobuf==4.25.8
-hvac==2.1.0
-prometheus_client==0.20.0
-pydantic-settings==2.2.1
-pydantic==2.7.0
+grpcio==1.84.0
+protobuf==7.36.2
+hvac==2.4.0
+prometheus_client==0.26.0
+pydantic==2.14.1
+pydantic-settings==2.16.1
+requests==2.34.2

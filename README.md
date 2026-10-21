@@ -1,7 +1,7 @@
 # DEXUS VAULT
 
 [![Latest Github release](https://img.shields.io/github/tag/ifurs/dexus-vault.svg)](https://github.com/ifurs/dexus-vault/releases/latest)
-![Python](https://img.shields.io/badge/python-v3.8+-blue.svg)
+![Python](https://img.shields.io/badge/python-v3.11+-blue.svg)
 ![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)
 
 ## **dexus-vault** - synchronizer of Dex clients with secrets in Vault
@@ -179,7 +179,7 @@ For more details, please see the [README](docker/tests/README.md).
 
 - This projects uses pre-commit: <https://pre-commit.com/>
 
-- All gRPC API methods dexus_vault use, defined in [api.proto](https://github.com/dexidp/dex/blob/v2.38.0/api/v2/api.proto)
+- All gRPC API methods dexus_vault use, defined in [api.proto](https://github.com/dexidp/dex/blob/v2.46.0/api/v2/api.proto)
 and compiled with `grpc_tools.protoc`
 
 ## Roadmap
