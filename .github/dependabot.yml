@@ -1,9 +1,12 @@
 version: 2
+# a cooldown gives the ecosystem time to spot a compromised release before we pick it up
 updates:
-  - package-ecosystem: pip
+  - package-ecosystem: uv
     directory: /
     schedule:
       interval: monthly
+    cooldown:
+      default-days: 7
     groups:
       python:
         patterns: ["*"]
@@ -11,6 +14,8 @@ updates:
     directory: /
     schedule:
       interval: monthly
+    cooldown:
+      default-days: 7
     groups:
       actions:
         patterns: ["*"]
@@ -19,8 +24,12 @@ updates:
       - /docker/image
     schedule:
       interval: monthly
+    cooldown:
+      default-days: 7
   - package-ecosystem: docker-compose
     directories:
       - /docker/tests
     schedule:
       interval: monthly
+    cooldown:
+      default-days: 7

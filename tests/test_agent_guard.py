@@ -125,3 +125,18 @@ def test_verify_blocks_on_failing_checks(tmp_path):
 
 def test_unknown_mode_is_an_error():
     assert run("nope", {}).returncode == 1
+
+
+def test_verify_uses_uv_with_a_lockfile(tmp_path, monkeypatch):
+    (tmp_path / ".git").mkdir()
+    (tmp_path / "uv.lock").write_text("")
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    # a fake uv that records how it was called and fails
+    uv = bin_dir / "uv"
+    uv.write_text('#!/bin/sh\necho "uv $*" >&2\nexit 3\n')
+    uv.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{bin_dir}:/usr/bin:/bin")
+    result = run("verify", {"stop_hook_active": False, "cwd": str(tmp_path)})
+    assert result.returncode == 2
+    assert "uv run --frozen black --check" in result.stderr

@@ -166,3 +166,20 @@ def test_close_revokes_only_tokens_we_created():
     client = mock.Mock()
     connected(VaultSource(config(vault_token="t")), client).close()
     client.auth.token.revoke_self.assert_not_called()
+
+
+def test_warns_when_tls_verification_is_disabled(caplog):
+    VaultSource(config(vault_token="t", vault_cert_ca=False))
+    assert "verification is disabled" in caplog.text
+
+
+def test_warns_about_plain_http_to_a_remote_vault(caplog):
+    VaultSource(config(vault_token="t", vault_addr="http://vault.example.com:8200"))
+    assert "plain http" in caplog.text
+
+
+def test_no_warning_for_https_or_loopback(caplog):
+    VaultSource(config(vault_token="t", vault_addr="https://vault.example.com"))
+    VaultSource(config(vault_token="t", vault_addr="http://127.0.0.1:8200"))
+    assert "plain http" not in caplog.text
+    assert "verification is disabled" not in caplog.text

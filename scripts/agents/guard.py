@@ -13,7 +13,9 @@ agent. These are backstops for the agents' instructions, not a sandbox.
 import json
 import re
 import shutil
-import subprocess
+
+# only fixed lint/test commands are run, without a shell
+import subprocess  # nosec B404
 import sys
 from pathlib import Path
 
@@ -94,13 +96,17 @@ def verify(event: dict) -> int:
         ["ruff", "check", "-q", "."],
         ["pytest", "-q", "-x", "-p", "no:cacheprovider"],
     ]
+    if (root / "uv.lock").exists() and shutil.which("uv"):
+        # the locked tool versions, the same ones CI uses
+        checks = [["uv", "run", "--frozen", *command] for command in checks]
     for command in checks:
         if shutil.which(command[0]) is None:
             print(
                 f"verify gate skipped: {command[0]} is not installed", file=sys.stderr
             )
             return 1
-        result = subprocess.run(
+        # fixed argv, no shell, nothing taken from the hook input
+        result = subprocess.run(  # nosec B603
             command, cwd=root, capture_output=True, text=True, timeout=600
         )
         if result.returncode != 0:

@@ -64,7 +64,9 @@ class GeneralConfig(_Settings):
 
 class MetricsConfig(_Settings):
     metrics_enable: bool = True
-    metrics_addr: str = "0.0.0.0"
+    # all interfaces, so Kubernetes probes and Prometheus can reach the pod;
+    # the endpoints expose counts only, never client data
+    metrics_addr: str = "0.0.0.0"  # nosec B104
     metrics_port: int = 8000
     internal_metrics: bool = False
 

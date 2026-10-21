@@ -50,9 +50,11 @@ Secrets that are invalid, or that define the same client id twice, are reported 
 ## 💾 Installation
 
 ```bash
-pip install dexus-vault          # Vault backend
-pip install 'dexus-vault[aws]'   # adds the AWS SSM backend (boto3)
+uv tool install dexus-vault          # Vault backend
+uv tool install 'dexus-vault[aws]'   # adds the AWS SSM backend (boto3)
 ```
+
+`pip install dexus-vault` works as well.
 
 or with Docker:
 
@@ -383,14 +385,27 @@ It is not suitable for production.
 
 ## 🛠 Development
 
+The project is managed with [uv](https://docs.astral.sh/uv/). Dependencies are pinned in `uv.lock`.
+
 ```bash
-pip install -r requirements-dev.txt -e ".[aws]"
-pytest                                  # unit tests
-docker/tests/start.sh up && DEXUS_INTEGRATION=1 pytest tests/integration
-black . && ruff check .
+uv sync --extra aws                     # .venv with the locked runtime and dev dependencies
+uv run pytest                           # unit tests
+docker/tests/start.sh up && DEXUS_INTEGRATION=1 uv run pytest tests/integration
+uv run black . && uv run ruff check .
+uv lock --upgrade                       # update dependencies, then commit uv.lock
 ```
 
-The project uses [pre-commit](https://pre-commit.com/).
+The project uses [pre-commit](https://pre-commit.com/); the hooks also keep `uv.lock` in sync with `pyproject.toml`.
+
+Security checks, all of which also run in CI:
+
+```bash
+uv audit --preview-features audit-command --frozen   # known vulnerabilities in locked dependencies
+uvx zizmor@1.31.1 .github                            # GitHub Actions security
+uvx bandit@1.9.2 -q -r dexus_vault scripts -x dexus_vault/grpc_dexidp
+```
+
+CI also scans the Docker image with Trivy and fails on fixable HIGH or CRITICAL vulnerabilities. See [SECURITY.md](SECURITY.md) for reporting vulnerabilities.
 
 For [Claude Code](https://claude.com/claude-code), [CLAUDE.md](CLAUDE.md) holds the project rules, and `.claude/` defines project agents and skills:
 

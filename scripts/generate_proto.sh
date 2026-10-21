@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Regenerate Dex gRPC Python stubs from proto/dexidp/api.proto.
-# Usage: scripts/generate_proto.sh [dex-version]   (requires grpcio-tools)
+# Usage: scripts/generate_proto.sh [dex-version]   (uses grpcio-tools from uv.lock)
 # With a dex version (e.g. v2.46.0) the proto is downloaded first.
 set -euo pipefail
 
@@ -11,7 +11,7 @@ if [ -n "${1:-}" ]; then
         "https://raw.githubusercontent.com/dexidp/dex/$1/api/v2/api.proto"
 fi
 
-python -m grpc_tools.protoc \
+uv run --frozen python -m grpc_tools.protoc \
     -I proto \
     --python_out=dexus_vault/grpc_dexidp \
     --grpc_python_out=dexus_vault/grpc_dexidp \

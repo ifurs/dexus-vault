@@ -2,8 +2,29 @@
 Secret sources: the backends Dex client definitions are read from.
 """
 
+import ipaddress
 from dataclasses import dataclass
 from typing import Any, Protocol
+from urllib.parse import urlsplit
+
+
+def is_plaintext_remote(url: str | None) -> bool:
+    """
+    True for http:// URLs that leave the machine, where credentials and
+    secrets would travel unencrypted. Loopback is fine for local testing.
+    """
+    if not url:
+        return False
+    parts = urlsplit(url)
+    if parts.scheme != "http":
+        return False
+    host = parts.hostname or ""
+    if host == "localhost" or host.endswith(".localhost"):
+        return False
+    try:
+        return not ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return True
 
 
 class SourceError(Exception):

@@ -1,6 +1,6 @@
 *
 !pyproject.toml
-!requirements.txt
+!uv.lock
 !README.md
 !LICENSE
 !dexus_vault/

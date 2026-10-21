@@ -11,11 +11,11 @@ No claim that something works, passes or is fixed without output from a command 
 
 | change touches | run |
 |:---|:---|
-| anything | `black --check . && ruff check . && pytest -q` |
-| `sources/`, `dex.py`, `sync.py`, `cli.py`, `docker/tests/` | also `docker/tests/start.sh up` then `DEXUS_INTEGRATION=1 pytest -q tests/integration` |
-| `docker/image/`, `pyproject.toml`, `requirements*.txt` | also `docker build -f docker/image/Dockerfile .` and `python -m build` |
+| anything | `uv run black --check . && uv run ruff check . && uv run pytest -q` |
+| `sources/`, `dex.py`, `sync.py`, `cli.py`, `docker/tests/` | also `docker/tests/start.sh up` then `DEXUS_INTEGRATION=1 uv run pytest -q tests/integration` |
+| `docker/image/`, `pyproject.toml`, `uv.lock` | also `uv lock --check`, `uv build`, `docker build -f docker/image/Dockerfile .` and `uv audit --preview-features audit-command --frozen` |
 | CLI behavior or exit codes | also run `dexus-vault --env-file docker/tests/.env --once` (or `.env.ssm`) and check `echo $?` |
-| `.github/workflows/` | parse every changed YAML file; CI itself only runs after a push |
+| `.github/` | `uvx zizmor@1.31.1 .github` (must report no findings), and verify every new `uses:` SHA exists; CI itself only runs after a push |
 
 Start the compose stack only if it is not running (`docker compose -f docker/tests/docker-compose.yaml ps`), and stop it again if you started it.
 
