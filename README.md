@@ -406,7 +406,9 @@ uvx zizmor@1.31.1 .github                            # GitHub Actions security
 uvx bandit@1.9.2 -q -r dexus_vault scripts -x dexus_vault/grpc_dexidp
 ```
 
-CI also scans the Docker image with Trivy and fails on fixable HIGH or CRITICAL vulnerabilities. See [SECURITY.md](SECURITY.md) for reporting vulnerabilities.
+CI also scans the Docker image with Trivy and fails on fixable HIGH or CRITICAL vulnerabilities.
+
+Dependabot proposes updates monthly and waits 7 days after a release before proposing it, so a compromised release has time to be noticed. For images on `ghcr.io`, such as the `astral-sh/uv` build image, it cannot know the release date and says so in the PR ("Cooldown could not be applied"); wait until the release is a week old before merging those. Python dependency PRs normally only touch `uv.lock`; `pyproject.toml` changes only when a new version is outside the allowed range. See [SECURITY.md](SECURITY.md) for reporting vulnerabilities.
 
 For [Claude Code](https://claude.com/claude-code), [CLAUDE.md](CLAUDE.md) holds the project rules, and `.claude/` defines project agents and skills:
 

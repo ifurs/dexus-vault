@@ -1,10 +1,13 @@
 version: 2
-# a cooldown gives the ecosystem time to spot a compromised release before we pick it up
+# a cooldown gives the ecosystem time to spot a compromised release before we pick it up;
+# Dependabot cannot apply it to images on ghcr.io (no publication date), see README
 updates:
   - package-ecosystem: uv
     directory: /
     schedule:
       interval: monthly
+    # update uv.lock, and pyproject.toml only when a new version is outside its range
+    versioning-strategy: increase-if-necessary
     cooldown:
       default-days: 7
     groups:
