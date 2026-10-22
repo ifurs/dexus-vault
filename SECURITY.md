@@ -12,7 +12,7 @@ dexus-vault handles Dex client secrets and credentials for Vault and AWS, so rep
 
 ## Verifying releases
 
-Every release is built by GitHub Actions from `main` after a reviewed pull request bumps the version; no release starts from a hand-pushed tag.
+Every release is built by GitHub Actions from `main` after a pull request bumps the version; no release starts from a hand-pushed tag or a manual run. Which changes reach `main` is governed by the repository's branch rules (see README "Releasing").
 
 **PyPI packages** are uploaded with trusted publishing and carry [PEP 740](https://peps.python.org/pep-0740/) attestations. The same files with Sigstore signatures are attached to the GitHub release:
 
@@ -29,3 +29,5 @@ cosign verify ifurs/dexus-vault:<version> \
   --certificate-identity 'https://github.com/ifurs/dexus-vault/.github/workflows/docker-publish.yml@refs/heads/main'
 docker buildx imagetools inspect ifurs/dexus-vault:<version> --format '{{ json .SBOM }}'
 ```
+
+The signature identity names the workflow, not the source commit. To check that an image was built from the tagged commit, compare the image's `org.opencontainers.image.revision` label (also recorded in the provenance attestation and as the `commit` signature annotation) with `git rev-parse <version>^{commit}`. Images up to 0.3.1 were signed by the old tag-triggered workflow, with identity `.../docker-publish.yml@refs/tags/<version>`.

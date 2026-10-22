@@ -1,5 +1,6 @@
 # Called by the release workflow (publish-to-pypi.yml) for every new release.
-# Run it by hand to publish the image of an existing release tag again.
+# Run it by hand, from main, to publish the image of an existing release again;
+# the tag must point to a commit on main whose __version__ matches it.
 name: Publish Docker 🐳 image 📦 to DockerHub
 on:
   workflow_call:
@@ -8,11 +9,18 @@ on:
         description: Release tag to publish
         required: true
         type: string
+      sha:
+        description: Commit the tag must point to
+        required: true
+        type: string
       latest:
         description: Also move the latest tag
         required: false
         type: boolean
         default: false
+    secrets:
+      DOCKERHUB_TOKEN:
+        required: true
   workflow_dispatch:
     inputs:
       tag:
@@ -37,6 +45,7 @@ env:
 
 jobs:
   build:
+    name: Build, push and sign the image
     runs-on: ubuntu-24.04
     environment: dockerhub
     permissions:
@@ -44,21 +53,36 @@ jobs:
       id-token: write # keyless cosign signing
 
     steps:
-      - name: Validate the release tag
-        env:
-          TAG: ${{ inputs.tag }}
-        run: |
-          if ! [[ "$TAG" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "::error::'$TAG' is not a release tag"
-            exit 1
-          fi
-          echo "RELEASE_TAG=$TAG" >> "$GITHUB_ENV"
-
-      - name: Checkout the release tag
+      - name: Checkout with history and tags
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: refs/tags/${{ env.RELEASE_TAG }}
+          ref: ${{ inputs.sha || github.sha }}
+          fetch-depth: 0
+          fetch-tags: true
           persist-credentials: false
+
+      - name: Verify the release and check out its commit
+        env:
+          TAG: ${{ inputs.tag }}
+          EXPECTED_SHA: ${{ inputs.sha }}
+          EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+        run: |
+          fail() { echo "::error::$1"; exit 1; }
+          [[ "$TAG" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || fail "'$TAG' is not a release tag"
+          if [ "$EVENT" = workflow_dispatch ] && [ "$REF" != refs/heads/main ]; then
+            fail "run this workflow from main"
+          fi
+          commit=$(git rev-parse -q --verify "refs/tags/$TAG^{commit}") || fail "tag $TAG does not exist"
+          if [ -n "$EXPECTED_SHA" ] && [ "$commit" != "$EXPECTED_SHA" ]; then
+            fail "tag $TAG points to $commit, expected $EXPECTED_SHA"
+          fi
+          git merge-base --is-ancestor "$commit" origin/main || fail "tag $TAG is not on main"
+          git checkout -q --detach "$commit"
+          version=$(sed -n 's/^__version__ = "\(.*\)"$/\1/p' dexus_vault/__version__.py)
+          [ "$version" = "$TAG" ] || fail "commit $commit has __version__ $version, not $TAG"
+          echo "RELEASE_TAG=$TAG" >> "$GITHUB_ENV"
+          echo "RELEASE_SHA=$commit" >> "$GITHUB_ENV"
 
       - name: Install cosign
         uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
@@ -82,6 +106,9 @@ jobs:
         with:
           images: ${{ env.IMAGE_NAME }}
           flavor: latest=false
+          labels: |
+            org.opencontainers.image.revision=${{ env.RELEASE_SHA }}
+            org.opencontainers.image.version=${{ env.RELEASE_TAG }}
           # "latest" only when asked for: republishing an older tag must not move it
           tags: |
             type=semver,pattern={{version}},value=${{ env.RELEASE_TAG }}
@@ -107,4 +134,4 @@ jobs:
         env:
           DIGEST: ${{ steps.build-and-push.outputs.digest }}
         # keyless signature with the workflow identity, recorded in Rekor
-        run: cosign sign --yes "${REGISTRY}/${IMAGE_NAME}@${DIGEST}"
+        run: cosign sign --yes -a "commit=${RELEASE_SHA}" -a "tag=${RELEASE_TAG}" "${REGISTRY}/${IMAGE_NAME}@${DIGEST}"

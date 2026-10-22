@@ -13,6 +13,7 @@ concurrency:
 
 jobs:
   lint:
+    name: Lint
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -24,6 +25,7 @@ jobs:
       - run: uv run --frozen ruff check .
 
   test:
+    name: Unit tests (Python ${{ matrix.python-version }})
     runs-on: ubuntu-24.04
     strategy:
       matrix:
@@ -39,6 +41,7 @@ jobs:
       - run: uv run --frozen pytest
 
   integration:
+    name: Integration tests
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -56,6 +59,7 @@ jobs:
         run: docker compose -f docker/tests/docker-compose.yaml logs
 
   build:
+    name: Build package and image
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -81,6 +85,7 @@ jobs:
           dexus-vault:ci
 
   security:
+    name: Security scans
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

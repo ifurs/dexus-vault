@@ -369,7 +369,7 @@ Things that commonly go wrong:
 - **Don't rely on the node role.** IMDSv2 with the default hop limit of 1 usually blocks pods from reaching it, so the sync fails with "Unable to locate credentials".
 - **Customer managed KMS keys** need `kms:Decrypt` for the role.
 
-The image works with `runAsNonRoot` and `readOnlyRootFilesystem`. Both credential paths were tested that way, against an emulated STS and Pod Identity agent.
+The image works with `runAsNonRoot` and `readOnlyRootFilesystem`. Both credential paths were checked that way by hand, against an emulated STS and Pod Identity agent; the integration tests cover IRSA.
 
 ## 💻 Local testing
 
@@ -441,13 +441,16 @@ Releases are automatic and never start from a hand-pushed tag:
 2. Review and merge it into `main`.
 3. The *Release* workflow (`.github/workflows/publish-to-pypi.yml`) sees a version without a tag, then builds with `uv build`, publishes to PyPI with trusted publishing, creates the tag and a GitHub release with Sigstore-signed files and generated notes, and publishes the signed multi-arch Docker image.
 
-Pushing tags by hand does not release anything. If a release job fails, re-run the failed jobs; publishing is idempotent. To publish the Docker image for an existing tag again, run *Publish Docker image* manually with that tag.
+Pushing tags by hand does not release anything, and the *Release* workflow cannot be started by hand: it only runs for commits on `main`. If a release job fails, re-run the failed jobs. They reuse the same build, so PyPI and the GitHub release always carry identical files, and the PyPI upload skips files that are already there. Builds set `SOURCE_DATE_EPOCH` to the commit time, which makes the wheel reproducible (the sdist still records file modification times).
 
-Recommended repository settings (Settings → Environments / Rules), which make this safe:
+To publish the Docker image of an existing release again, run *Publish Docker image* manually from `main` with the tag. It refuses tags that do not point to a commit on `main` whose `__version__` matches, and builds that exact commit; the image label `org.opencontainers.image.revision` and the cosign signature annotations record it.
 
-- **Required reviewers on the `pypi` and `dockerhub` environments**, so every release waits for a maintainer's approval.
-- **A branch ruleset on `main`** requiring pull requests, an approving review and passing CI.
-- **A tag ruleset on all tags** that blocks updates and deletions, plus **immutable releases**, so a published version cannot be changed afterwards.
+The workflows only release from `main`, but the repository settings decide who can change `main` and tags. Configure them (Settings → Rules / Environments):
+
+- **A branch ruleset on `main`** requiring pull requests, an approving review and passing CI, with no bypass. Without it, a direct push to `main` releases without review.
+- **A tag ruleset on `*.*.*`** that blocks updates and deletions (creation stays allowed for the release workflow), plus **immutable releases**, so a published version and its tag cannot be changed.
+- **The `pypi` and `dockerhub` environments**: deployment branches limited to `main`, required reviewers, and administrators not allowed to bypass, so every release waits for a maintainer's approval.
+- On PyPI, the trusted publisher limited to the `pypi` environment.
 
 ## ⬆️ Upgrading from 0.3
 

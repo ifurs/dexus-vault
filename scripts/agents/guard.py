@@ -3,12 +3,17 @@
 Claude Code hook guards for the project agents in .claude/agents.
 
     guard.py bash-readonly   PreToolUse(Bash): block commands that change state
-    guard.py bash-audit      like bash-readonly, but allows the security scanners
+    guard.py bash-audit      like bash-readonly, plus scripts/agents/scan.sh <scan>
     guard.py tests-only      PreToolUse(Edit|Write): allow edits under tests/ only
+    guard.py memory-only     PreToolUse(Edit|Write): allow edits of agent memory only
     guard.py verify          SubagentStop: block finishing while lint or tests fail
 
 Reads the hook input JSON on stdin. Exit 2 blocks, stderr is shown to the
-agent. These are backstops for the agents' instructions, not a sandbox.
+agent. Guards fail closed on unreadable input.
+
+These are backstops for the agents' instructions, not a sandbox: a pattern
+list cannot recognise every way a shell can change state. For untrusted
+content, also run the agents with Claude Code's sandbox enabled.
 """
 
 import json
@@ -20,72 +25,46 @@ import subprocess  # nosec B404
 import sys
 from pathlib import Path
 
-# commands a read-only agent must not run
+# commands a read-only agent must not run; `=` forms of flags are covered too
 MUTATING = [
-    r"\bgit\s+(commit|push|reset|checkout|switch|merge|rebase|stash|tag|clean|restore|rm|mv|add|apply|am|cherry-pick|revert|branch\s+-[dDmM])\b",
-    r"\b(pip3?|uv|poetry|pipx|npm|apt(-get)?|brew)\s+(install|uninstall|add|remove|upgrade)\b",
-    r"(^|[\s;&|(])(rm|mv|cp|chmod|chown|touch|mkdir|rmdir|ln|truncate|dd|tee)\s",
+    r"\bgit\s+(commit|push|reset|checkout|switch|merge|rebase|stash|tag|clean|restore|rm|mv|add|apply|am|cherry-pick|revert|update-ref|symbolic-ref|update-index|notes|config|worktree|gc|prune|replace|filter-branch|branch\s+-[dDmMf])\b",
+    r"\b(pip3?|uv|poetry|pipx|npm|apt(-get)?|brew)\s+(install|uninstall|add|remove|upgrade|pip|tool\s+install)\b",
+    r"\buv\s+lock\b(?!.*\s--check\b)",
+    r"(^|[\s;&|(])(rm|mv|cp|chmod|chown|touch|mkdir|rmdir|ln|truncate|dd|tee|install|rsync|shred|unlink)\s",
     r"\bsed\s+(-[a-zA-Z]*i|--in-place)",
-    r"\bdocker\s+(compose\s+)?(run|up|down|rm|stop|kill|exec|build|push|create|start|restart)\b",
-    r"\bgh\s+(pr|issue|release|repo|workflow|run|secret|variable|label)\s+(create|edit|merge|close|reopen|delete|comment|review|run|set|cancel|rerun)\b",
-    r"\b(gh\s+api|curl|wget)\b.*(\s-X\s*|--method\s+|--request\s+)(POST|PUT|PATCH|DELETE)\b",
-    r"\bcurl\b.*\s(-d|--data\S*|-F|--form|-T|--upload-file)\s",
-    r"\b(kubectl|helm|terraform)\s+(apply|create|delete|patch|replace|install|upgrade|uninstall|destroy|import)\b",
-    r"\baws\s+\S+\s+(put|delete|create|update|modify|remove|attach|detach|start|stop|terminate)-",
+    r"\bperl\s+-[a-zA-Z]*[ip]",
+    r"\bfind\b.*\s-(delete|exec|execdir|ok|okdir|fprint\w*)\b",
+    # docker as a command (the docker/tests/start.sh stack script stays allowed)
+    r"(^|[\s;&|(/])(sudo\s+)?docker(?!/)(\s|$)",
+    # handing a string to a shell or eval hides the real command
+    r"(\|\s*|\b(env|exec|xargs|nohup|timeout|nice)\s+)(\S*/)?(ba|z|da|k)?sh\b|\b(ba|z|da|k)?sh\s+-[a-z]*c\b|\beval\b|\bsource\b|(^|[\s;&|])\.\s",
+    r"\bgh\s+(pr|issue|release|repo|workflow|run|secret|variable|label|gist|cache|ruleset|attestation)\s+(create|edit|merge|close|reopen|delete|comment|review|run|set|cancel|rerun|enable|disable|upload|fork|sync|rename|archive)\b",
+    # gh api sends POST as soon as a field is given; any explicit non-GET method too
+    r"\bgh\s+api\b.*\s(-[fF]|--field|--raw-field|--input)([\s=]|$)",
+    r"\b(gh\s+api|curl|wget|http|https)\b.*\s(-X|--method|--request)[\s=]*['\"]?(?!GET\b)[A-Za-z]",
+    r"\bcurl\b.*\s(-d|--data\S*|-F|--form\S*|-T|--upload-file|--json)([\s=]|$)",
+    r"\bwget\b.*\s--(post|method|body)",
+    r"\b(kubectl|helm|terraform)\s+(apply|create|delete|patch|replace|install|upgrade|uninstall|destroy|import|edit|scale)\b",
+    r"\baws\s+\S+\s+(put|delete|create|update|modify|remove|attach|detach|start|stop|terminate|send|invoke)-",
     r"\bvault\s+(write|delete|kv\s+(put|patch|delete|destroy|undelete|rollback)|secrets\s+(enable|disable)|auth\s+(enable|disable)|policy\s+(write|delete)|token\s+(create|revoke))\b",
+    # interpreters writing files or running processes
+    r"\b(python3?|node|ruby)\b.*\s-[ce]\b.*\b(open|write\w*|unlink|remove|rmtree|rename|replace|chmod|system|popen|Popen|subprocess|exec|spawn|socket|urlopen|requests)\b",
     # output redirection into a file (stderr redirects and /dev/null are fine)
-    r"(^|[^0-9&>])>>?\s*(?!/dev/null|&)[^\s&|;]",
+    r"(^|[^0-9&>])>>?\|?\s*(?!/dev/null|&)[^\s&|;]",
+    # agent memory is notes, read with the Read tool, never run or written by shell
+    r"\.claude/agent-memory",
+    # repository scripts that write files or run containers (scan.sh only via bash-audit)
+    r"scripts/(generate_proto|agents/scan)\.sh",
+    # command and process substitution hide commands from the checks above
+    r"\$\(|`|<\(|>\(",
 ]
 EDITABLE_PREFIXES = ("tests/", "docker/tests/templ/")
-
-# security scanner containers the audit agent may run, and the throwaway image it scans
-SCANNER_IMAGES = ("aquasec/trivy", "zricethezav/gitleaks", "hadolint/hadolint")
-AUDIT_IMAGE = "dexus-vault:audit"
-NAMED_VOLUME = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]*")
-SEGMENT_SPLIT = re.compile(r"\s*(?:&&|\|\||;|\|)\s*")
-
-
-def _scanner_run(segment: str) -> bool:
-    """
-    `docker run --rm` of a scanner image whose bind mounts are all read-only.
-    Named volumes (e.g. a trivy cache) are allowed, they never touch the host tree.
-    """
-    words = segment.split()
-    if words[:3] != ["docker", "run", "--rm"]:
-        return False
-    if not any(
-        word.startswith(f"{image}:") or word.startswith(f"{image}@")
-        for word in words
-        for image in SCANNER_IMAGES
-    ):
-        return False
-    for flag, value in zip(words, words[1:], strict=False):
-        if flag in ("-v", "--volume", "--mount"):
-            source = value.split(":", 1)[0]
-            # anything but a plain volume name is a host path and must be read-only
-            if not NAMED_VOLUME.fullmatch(source) and not value.endswith(":ro"):
-                return False
-        if flag in ("--privileged", "--pid", "--network") or flag.startswith(
-            "--cap-add"
-        ):
-            return False
-    return True
-
-
-def _audit_allowed(segment: str) -> bool:
-    words = segment.split()
-    if _scanner_run(segment):
-        return True
-    if (
-        words[:2] == ["docker", "build"]
-        and AUDIT_IMAGE in words
-        and "--push" not in words
-    ):
-        return True
-    return (
-        words[:3] in (["docker", "image", "rm"], ["docker", "rmi", AUDIT_IMAGE])
-        and words[-1] == AUDIT_IMAGE
-    )
+# project memory (shared through git) and local memory (gitignored)
+MEMORY_PREFIXES = (".claude/agent-memory/", ".claude/agent-memory-local/")
+# the only way the audit agent may run scanners: fixed argv in a reviewed script
+SCAN_COMMAND = re.compile(
+    r"(bash\s+)?(\./)?scripts/agents/scan\.sh\s+(deps|workflows|code|secrets|dockerfile|image|all)"
+)
 
 
 def _deny(reason: str) -> int:
@@ -99,9 +78,17 @@ def bash_readonly(event: dict) -> int:
         if re.search(pattern, command):
             return _deny(
                 "Blocked: this agent is read-only and the command changes state "
-                f"(matched {pattern!r}). Report what should be run instead."
+                f"(matched {pattern!r}). Run inner commands separately, or report "
+                "what should be run instead."
             )
     return 0
+
+
+def bash_audit(event: dict) -> int:
+    command = event.get("tool_input", {}).get("command", "").strip()
+    if SCAN_COMMAND.fullmatch(command):
+        return 0
+    return bash_readonly(event)
 
 
 def _repo_root(path: Path) -> Path | None:
@@ -111,21 +98,53 @@ def _repo_root(path: Path) -> Path | None:
     return None
 
 
-def tests_only(event: dict) -> int:
+def _edited_path(event: dict) -> tuple[str | None, str | None]:
+    """
+    The repository-relative path a file tool is about to write, and the raw path.
+    """
     tool_input = event.get("tool_input", {})
     raw = tool_input.get("file_path") or tool_input.get("notebook_path")
     if not raw:
-        return 0
+        return None, None
     path = Path(raw)
     if not path.is_absolute():
         path = Path(event.get("cwd") or ".") / path
     path = path.resolve()
     root = _repo_root(path.parent)
-    relative = path.relative_to(root).as_posix() if root else None
+    return (path.relative_to(root).as_posix() if root else None), raw
+
+
+def tests_only(event: dict) -> int:
+    relative, raw = _edited_path(event)
+    if raw is None:
+        return 0
     if relative is None or not relative.startswith(EDITABLE_PREFIXES):
         return _deny(
             f"Blocked: this agent may only edit {', '.join(EDITABLE_PREFIXES)} "
             f"(tried {raw}). Report product code bugs instead of fixing them."
+        )
+    return 0
+
+
+def memory_only(event: dict) -> int:
+    relative, raw = _edited_path(event)
+    if raw is None:
+        return 0
+    path = Path(raw) if Path(raw).is_absolute() else Path(event.get("cwd") or ".") / raw
+    # only this repository's memory, and only notes, so nothing written can be run
+    same_repo = _repo_root(path.resolve().parent) == _repo_root(
+        Path(event.get("cwd") or ".").resolve()
+    )
+    if (
+        relative is None
+        or not same_repo
+        or not relative.startswith(MEMORY_PREFIXES)
+        or not relative.endswith(".md")
+    ):
+        return _deny(
+            f"Blocked: this agent may only write Markdown notes under "
+            f"{' or '.join(MEMORY_PREFIXES)} of this repository (tried {raw}). "
+            "Report changes instead of making them."
         )
     return 0
 
@@ -168,20 +187,11 @@ def verify(event: dict) -> int:
     return 0
 
 
-def bash_audit(event: dict) -> int:
-    command = event.get("tool_input", {}).get("command", "")
-    remaining = " ; ".join(
-        segment
-        for segment in SEGMENT_SPLIT.split(command)
-        if not _audit_allowed(segment)
-    )
-    return bash_readonly({"tool_input": {"command": remaining}})
-
-
 MODES = {
     "bash-readonly": bash_readonly,
     "bash-audit": bash_audit,
     "tests-only": tests_only,
+    "memory-only": memory_only,
     "verify": verify,
 }
 
@@ -193,7 +203,9 @@ def main(argv: list[str]) -> int:
     try:
         event = json.load(sys.stdin)
     except ValueError:
-        return 0
+        if argv[1] == "verify":
+            return 0
+        return _deny("Blocked: the guard could not read the hook input")
     return MODES[argv[1]](event)
 
 

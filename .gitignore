@@ -167,3 +167,4 @@ cython_debug/
 # Claude Code local state
 .claude/worktrees/
 .claude/settings.local.json
+.claude/agent-memory-local/

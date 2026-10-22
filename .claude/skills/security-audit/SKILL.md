@@ -10,22 +10,20 @@ Mode: `$ARGUMENTS` (default `diff main...HEAD`; `full` audits the whole reposito
 
 ## 1. Scanners
 
-Run all of them in a full audit; in diff mode run the ones that cover the changed areas. Every command is read-only (scanner images get read-only mounts).
+Run them through `scripts/agents/scan.sh`, which has fixed arguments and pinned versions (the auditor agent can run scanners no other way). `all` in a full audit; in diff mode the scans that cover the changed areas.
 
-```bash
-uv audit --preview-features audit-command --frozen                 # known vulnerabilities in uv.lock
-GH_TOKEN=$(gh auth token) uvx zizmor@1.31.1 --persona auditor .github   # workflows, incl. known-vulnerable actions
-uvx bandit@1.9.2 -q -r dexus_vault scripts -x dexus_vault/grpc_dexidp
-docker run --rm -v "$PWD":/repo:ro zricethezav/gitleaks:v8.30.1 git /repo --redact --no-banner
-docker run --rm -i hadolint/hadolint:v2.15.1 < docker/image/Dockerfile
-docker build -q -f docker/image/Dockerfile -t dexus-vault:audit .
-docker run --rm -v /var/run/docker.sock:/var/run/docker.sock:ro -v trivy-cache:/root/.cache \
-  aquasec/trivy:0.76.1@sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c \
-  image --scanners vuln,secret,misconfig --severity HIGH,CRITICAL dexus-vault:audit
-docker image rm -f dexus-vault:audit
-```
+| scan | what it runs | covers |
+|:---|:---|:---|
+| `scripts/agents/scan.sh deps` | `uv audit` on `uv.lock` | known vulnerabilities in dependencies |
+| `scripts/agents/scan.sh workflows` | zizmor, auditor persona, online when `gh` is logged in | GitHub workflows, incl. known-vulnerable actions |
+| `scripts/agents/scan.sh code` | bandit | Python code |
+| `scripts/agents/scan.sh secrets` | gitleaks over the full git history | committed secrets |
+| `scripts/agents/scan.sh dockerfile` | hadolint | Dockerfile |
+| `scripts/agents/scan.sh image` | builds `dexus-vault:audit`, Trivy (all, then fixable only), removes the image | image CVEs, secrets, misconfiguration |
 
-Also check what scanners miss: every `uses:` SHA in `.github/` exists (`gh api repos/<owner>/<repo>/commits/<sha>`), and its version comment matches the tag it points to.
+`deps`, `workflows` and `code` need uv on the host. If a scan cannot run, report it as not run.
+
+Also check what scanners miss: every `uses:` SHA in `.github/` exists (`gh api repos/<owner>/<repo>/commits/<sha>`), and its version comment matches the tag it points to; and who can start each release or publish workflow, from which ref, and what it builds.
 
 ## 2. Threat model
 
@@ -49,7 +47,7 @@ Also check what scanners miss: every `uses:` SHA in `.github/` exists (`gh api r
 - TLS: verification stays on by default for Vault, Dex and AWS; insecure settings warn.
 - Destructive operations (delete/recreate/prune) cannot be triggered by partial, empty or malformed source data.
 - Credentials: tokens created by dexus-vault are revoked on exit; files are read, not logged; nothing is written to disk.
-- Workflows: no `pull_request_target` or `workflow_run` with checkout of PR code; `${{ }}` only via `env:` in `run:`; least-privilege `permissions`; `persist-credentials: false`; no caches in release jobs; release only from `main` after review.
+- Workflows: no `pull_request_target` or `workflow_run` with checkout of PR code; `${{ }}` only via `env:` in `run:`; least-privilege `permissions`; `persist-credentials: false`; no caches in release jobs; release only from `main` after review; reusable workflows receive the secrets they need explicitly; a publish builds a pinned commit, never whatever a tag points to now.
 - Container: non-root, no pip, base images pinned by digest.
 
 ## 4. Judging findings

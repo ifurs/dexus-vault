@@ -6,12 +6,14 @@
 # The file name must stay publish-to-pypi.yml: PyPI trusted publishing is bound
 # to it, and the PyPI upload cannot move into a reusable workflow.
 name: Release
+#
+# There is deliberately no workflow_dispatch: a manual run could release another
+# branch. To retry a failed release, re-run its failed jobs; they reuse the same
+# build artifacts, so PyPI and the GitHub release always carry the same files.
 on:
   push:
     branches: [main]
     paths: [dexus_vault/__version__.py]
-  # retry a release whose tag does not exist yet
-  workflow_dispatch:
 
 permissions: {}
 
@@ -22,6 +24,8 @@ concurrency:
 jobs:
   plan:
     name: Decide whether to release
+    # defense in depth: only main is ever released
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     permissions:
       contents: read # checkout and read tags
@@ -53,7 +57,11 @@ jobs:
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           enable-cache: false
-      - run: uv build
+      - name: Build (wheel reproducible from the commit time)
+        run: |
+          SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)
+          export SOURCE_DATE_EPOCH
+          uv build
       - name: Store the distribution packages
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -118,4 +126,9 @@ jobs:
     uses: $/.github/workflows/docker-publish.yml
     with:
       tag: ${{ needs.plan.outputs.version }}
+      # build exactly the released commit, not whatever the tag points to later
+      sha: ${{ github.sha }}
       latest: true
+    secrets:
+      # environment secrets are not passed to reusable workflows unless named here
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
