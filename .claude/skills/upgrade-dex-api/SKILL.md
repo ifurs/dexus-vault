@@ -8,7 +8,7 @@ argument-hint: <dex-tag, e.g. v2.47.0>
 # Upgrade the Dex API to $ARGUMENTS
 
 1. **Research first.** Ask the dexus-researcher agent to diff `api/v2/api.proto` and `server/apiserver/clients.go` between the currently vendored tag (see the `dex-api` skill and README) and `$ARGUMENTS`, and to report: new or changed `Client`/`UpdateClientReq` fields, presence (`optional`) changes, new RPCs, changed error behavior, and the new `GetVersion().api` number.
-2. **Regenerate the stubs**: `scripts/generate_proto.sh $ARGUMENTS`, then `black dexus_vault/grpc_dexidp`. Do not hand-edit generated files.
+2. **Regenerate the stubs**: `scripts/generate_proto.sh $ARGUMENTS`, then `uv run black dexus_vault/grpc_dexidp`. Do not hand-edit generated files.
 3. **Adapt the code** with the dexus-developer agent, based on the research:
    - new client fields → `models.Client`, `from_proto`, `to_proto`, `to_update_request`; add them to `EXTENDED_FIELDS` with a new API version gate if older servers lack them; to `CLEARABLE_FIELDS` if `UpdateClient` can clear them;
    - new API version → constants in `dex.py` and the capability properties;

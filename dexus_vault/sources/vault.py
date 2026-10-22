@@ -11,7 +11,7 @@ import requests
 
 from dexus_vault.config import VaultConfig
 from dexus_vault.log import logger
-from dexus_vault.sources import SecretEntry, SourceError
+from dexus_vault.sources import SecretEntry, SourceError, is_plaintext_remote
 
 # auth methods that obtain their own token and can log in again when it expires
 LOGIN_METHODS = ("approle", "kubernetes", "ldap", "cert")
@@ -32,6 +32,16 @@ class VaultSource:
     def __init__(self, config: VaultConfig, stop: threading.Event | None = None):
         self.config = config
         self.auth_method = self._select_auth_method()
+        if config.vault_cert_ca is False:
+            logger.warning(
+                "Vault TLS certificate verification is disabled (VAULT_CERT_CA=false), "
+                "the connection and the Vault token can be intercepted"
+            )
+        if is_plaintext_remote(config.vault_addr):
+            logger.warning(
+                f"VAULT_ADDR {config.vault_addr} uses plain http, "
+                "the Vault token and client secrets travel unencrypted"
+            )
         # interrupts retries on shutdown
         self._stop = stop or threading.Event()
         self._client: hvac.Client | None = None

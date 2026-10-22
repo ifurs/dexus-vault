@@ -10,7 +10,7 @@ import json
 
 from dexus_vault.config import SsmConfig
 from dexus_vault.log import logger
-from dexus_vault.sources import SecretEntry, SourceError
+from dexus_vault.sources import SecretEntry, SourceError, is_plaintext_remote
 
 try:
     import boto3
@@ -45,6 +45,11 @@ class SsmSource:
             )
         self.config = config
         self._client = None
+        if is_plaintext_remote(config.ssm_endpoint_url):
+            logger.warning(
+                f"SSM_ENDPOINT_URL {config.ssm_endpoint_url} uses plain http, "
+                "decrypted parameters travel unencrypted"
+            )
 
     @property
     def _prefix(self) -> str:

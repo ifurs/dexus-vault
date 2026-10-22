@@ -45,7 +45,7 @@ Some sample clients are broken on purpose, to show how they are reported:
 With the stack running:
 
 ```sh
-DEXUS_INTEGRATION=1 pytest tests/integration
+DEXUS_INTEGRATION=1 uv run pytest tests/integration
 ```
 
 The tests use the root token and the dev server's `secret/` engine, and random parameter paths in the SSM emulator, and clean up after themselves.

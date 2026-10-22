@@ -22,8 +22,10 @@
 - [Pruning](#-pruning)
 - [Metrics](#-metrics)
 - [Running in Kubernetes](#-running-in-kubernetes)
+  - [EKS with the AWS SSM backend](#eks-with-the-aws-ssm-backend)
 - [Local testing](#-local-testing)
 - [Development](#-development)
+- [Releasing](#-releasing)
 - [Upgrading from 0.3](#-upgrading-from-03)
 - [Thanks](#-thanks)
 
@@ -49,9 +51,11 @@ Secrets that are invalid, or that define the same client id twice, are reported 
 ## 💾 Installation
 
 ```bash
-pip install dexus-vault          # Vault backend
-pip install 'dexus-vault[aws]'   # adds the AWS SSM backend (boto3)
+uv tool install dexus-vault          # Vault backend
+uv tool install 'dexus-vault[aws]'   # adds the AWS SSM backend (boto3)
 ```
+
+`pip install dexus-vault` works as well.
 
 or with Docker:
 
@@ -307,7 +311,65 @@ containers:
 
 For a CronJob, add `args: ["--once"]`, the pod then fails when the sync fails.
 
-On EKS with the SSM backend, replace the Vault variables with `SECRETS_BACKEND=aws-ssm`, `SSM_PATH` and `AWS_REGION`, and give the service account an IAM role (IRSA or Pod Identity) with the policy above.
+### EKS with the AWS SSM backend
+
+No AWS keys are needed in the pod. Give its service account an IAM role with the [SSM policy](#aws-ssm-parameter-store), using either IRSA or EKS Pod Identity. boto3 picks up both automatically and refreshes the temporary credentials itself, including the rotated IRSA token.
+
+```yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: dexus-vault
+  namespace: dex
+  annotations:
+    # IRSA only; with Pod Identity leave this out and create an association instead
+    eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/dexus-vault
+---
+# in the Deployment's pod spec
+serviceAccountName: dexus-vault
+containers:
+  - name: dexus-vault
+    image: ifurs/dexus-vault:0.4.0
+    env:
+      - { name: SECRETS_BACKEND, value: "aws-ssm" }
+      - { name: SSM_PATH, value: "/dex/clients" }
+      - { name: AWS_REGION, value: "eu-west-1" }
+      - { name: DEX_GRPC_URL, value: "dex.dex.svc:5557" }
+    # ports, probes and securityContext as above
+```
+
+**IRSA:** the role's trust policy allows the cluster's OIDC provider for this service account:
+
+```json
+{
+  "Effect": "Allow",
+  "Principal": { "Federated": "arn:aws:iam::123456789012:oidc-provider/oidc.eks.eu-west-1.amazonaws.com/id/EXAMPLE" },
+  "Action": "sts:AssumeRoleWithWebIdentity",
+  "Condition": {
+    "StringEquals": {
+      "oidc.eks.eu-west-1.amazonaws.com/id/EXAMPLE:sub": "system:serviceaccount:dex:dexus-vault",
+      "oidc.eks.eu-west-1.amazonaws.com/id/EXAMPLE:aud": "sts.amazonaws.com"
+    }
+  }
+}
+```
+
+**Pod Identity:** install the `eks-pod-identity-agent` add-on. Trust `pods.eks.amazonaws.com` with `sts:AssumeRole` and `sts:TagSession`, then associate the role:
+
+```bash
+aws eks create-pod-identity-association --cluster-name my-cluster \
+  --namespace dex --service-account dexus-vault \
+  --role-arn arn:aws:iam::123456789012:role/dexus-vault
+```
+
+Things that commonly go wrong:
+
+- **Static keys win.** `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` in the pod environment take precedence over IRSA and Pod Identity, so leave them unset.
+- **Private clusters** need VPC interface endpoints: `ssm`, plus `sts` for IRSA or `eks-auth` for Pod Identity. If you use a custom SSM endpoint, set `SSM_ENDPOINT_URL`; `AWS_ENDPOINT_URL_STS` works for STS.
+- **Don't rely on the node role.** IMDSv2 with the default hop limit of 1 usually blocks pods from reaching it, so the sync fails with "Unable to locate credentials".
+- **Customer managed KMS keys** need `kms:Decrypt` for the role.
+
+The image works with `runAsNonRoot` and `readOnlyRootFilesystem`. Both credential paths were checked that way by hand, against an emulated STS and Pod Identity agent; the integration tests cover IRSA.
 
 ## 💻 Local testing
 
@@ -324,14 +386,27 @@ It is not suitable for production.
 
 ## 🛠 Development
 
+The project is managed with [uv](https://docs.astral.sh/uv/). Dependencies are pinned in `uv.lock`.
+
 ```bash
-pip install -r requirements-dev.txt -e ".[aws]"
-pytest                                  # unit tests
-docker/tests/start.sh up && DEXUS_INTEGRATION=1 pytest tests/integration
-black . && ruff check .
+uv sync --extra aws                     # .venv with the locked runtime and dev dependencies
+uv run pytest                           # unit tests
+docker/tests/start.sh up && DEXUS_INTEGRATION=1 uv run pytest tests/integration
+uv run black . && uv run ruff check .
+uv lock --upgrade                       # update dependencies, then commit uv.lock
 ```
 
-The project uses [pre-commit](https://pre-commit.com/).
+The project uses [pre-commit](https://pre-commit.com/); the hooks also keep `uv.lock` in sync with `pyproject.toml`.
+
+Security checks, all of which also run in CI:
+
+```bash
+uv audit --preview-features audit-command --frozen   # known vulnerabilities in locked dependencies
+uvx zizmor@1.31.1 .github                            # GitHub Actions security
+uvx bandit@1.9.2 -q -r dexus_vault scripts -x dexus_vault/grpc_dexidp
+```
+
+CI also scans the Docker image with Trivy and fails on fixable HIGH or CRITICAL vulnerabilities. See [SECURITY.md](SECURITY.md) for reporting vulnerabilities.
 
 For [Claude Code](https://claude.com/claude-code), [CLAUDE.md](CLAUDE.md) holds the project rules, and `.claude/` defines project agents and skills:
 
@@ -341,12 +416,14 @@ For [Claude Code](https://claude.com/claude-code), [CLAUDE.md](CLAUDE.md) holds 
 | `dexus-developer` | opus | implements changes test-first along the existing seams; a Stop hook blocks it from finishing while lint or unit tests fail |
 | `dexus-tester` | sonnet | runs unit and integration suites against local endpoints only, reproduces bugs as failing tests; may edit test code only |
 | `dexus-reviewer` | opus | independent review of a diff in a fresh context, re-runs the checks, reports only correctness, security and requirement gaps |
+| `dexus-security-auditor` | opus | read-only security audit: runs the scanner suite, checks the threat model, reports only high-confidence exploitable findings; keeps accepted risks in project memory |
 
 | skill | use |
 |:---|:---|
 | `dex-api` | verified Dex RPC semantics and version matrix, preloaded into the agents |
 | `dexus-verify` | the verification gate: which checks to run for which change, and how to report evidence |
 | `/upgrade-dex-api <tag>` | step-by-step upgrade of the vendored Dex API |
+| `/security-audit [full \| diff <base>]` | the security audit procedure: scanners, threat model, how findings are judged |
 
 The hooks used by the agents are in [scripts/agents/guard.py](scripts/agents/guard.py), tested in `tests/test_agent_guard.py`.
 
@@ -355,6 +432,25 @@ The Dex gRPC stubs in `dexus_vault/grpc_dexidp` are generated from [api.proto](h
 ```bash
 scripts/generate_proto.sh v2.46.0
 ```
+
+## 🚢 Releasing
+
+Releases are automatic and never start from a hand-pushed tag:
+
+1. Open a pull request that bumps `__version__` in `dexus_vault/__version__.py` (`MAJOR.MINOR.PATCH`). CI's *Release preview* check shows "Merging this pull request releases X" and fails if the version is lower than the latest release.
+2. Review and merge it into `main`.
+3. The *Release* workflow (`.github/workflows/publish-to-pypi.yml`) sees a version without a tag, then builds with `uv build`, publishes to PyPI with trusted publishing, creates the tag and a GitHub release with Sigstore-signed files and generated notes, and publishes the signed multi-arch Docker image.
+
+Pushing tags by hand does not release anything, and the *Release* workflow cannot be started by hand: it only runs for commits on `main`. If a release job fails, re-run the failed jobs. They reuse the same build, so PyPI and the GitHub release always carry identical files, and the PyPI upload skips files that are already there. Builds set `SOURCE_DATE_EPOCH` to the commit time, which makes the wheel reproducible (the sdist still records file modification times).
+
+To publish the Docker image of an existing release again, run *Publish Docker image* manually from `main` with the tag. It refuses tags that do not point to a commit on `main` whose `__version__` matches, and builds that exact commit; the image label `org.opencontainers.image.revision` and the cosign signature annotations record it.
+
+The workflows only release from `main`, but the repository settings decide who can change `main` and tags. Configure them (Settings → Rules / Environments):
+
+- **A branch ruleset on `main`** requiring pull requests, an approving review and passing CI, with no bypass. Without it, a direct push to `main` releases without review.
+- **A tag ruleset on `*.*.*`** that blocks updates and deletions (creation stays allowed for the release workflow), plus **immutable releases**, so a published version and its tag cannot be changed.
+- **The `pypi` and `dockerhub` environments**: deployment branches limited to `main`, required reviewers, and administrators not allowed to bypass, so every release waits for a maintainer's approval.
+- On PyPI, the trusted publisher limited to the `pypi` environment.
 
 ## ⬆️ Upgrading from 0.3
 

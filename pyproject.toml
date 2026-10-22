@@ -34,13 +34,18 @@ dependencies = [
 
 [project.optional-dependencies]
 aws = ["boto3~=1.43"]
-dev = ["pytest>=9", "black>=26", "ruff>=0.17", "grpcio-tools~=1.84", "boto3~=1.43"]
+
+[dependency-groups]
+dev = ["pytest>=9", "black>=26", "ruff>=0.17", "grpcio-tools~=1.84"]
 
 [project.urls]
 Source = "https://github.com/ifurs/dexus-vault"
 
 [project.scripts]
 dexus-vault = "dexus_vault.cli:main"
+
+[tool.uv]
+required-version = ">=0.13"
 
 [tool.setuptools.dynamic]
 version = { attr = "dexus_vault.__version__.__version__" }

@@ -1,6 +1,7 @@
+# hooks pinned to commit SHAs; update with `pre-commit autoupdate --freeze`
 repos:
 -   repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v6.0.0
+    rev: 3e8a8703264a2f4a69428a0aa4dcb512790b2c8c  # frozen: v6.0.0
     hooks:
     - id: check-yaml
     - id: end-of-file-fixer
@@ -8,16 +9,21 @@ repos:
     - id: check-added-large-files
 
 -   repo: https://github.com/psf/black-pre-commit-mirror
-    rev: 26.10.1
+    rev: a5439e9af2ff9371297bb1a76a01b8ad17989b88  # frozen: 26.10.1
     hooks:
     - id: black
 
 -   repo: https://github.com/gitleaks/gitleaks
-    rev: v8.30.1
+    rev: 83d9cd684c87d95d656c1458ef04895a7f1cbd8e  # frozen: v8.30.1
     hooks:
     - id: gitleaks
 
 -   repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.17.1
+    rev: 38bfb07c0c64c304f47eb52090f8288150c77730  # frozen: v0.17.1
     hooks:
     - id: ruff
+
+-   repo: https://github.com/astral-sh/uv-pre-commit
+    rev: dd409d04a3fa4a50f918dddb3ad3c6d8f46ab2cd  # frozen: 0.13.4
+    hooks:
+    - id: uv-lock

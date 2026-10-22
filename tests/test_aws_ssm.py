@@ -176,3 +176,12 @@ def test_syncs_clients_from_ssm():
         report = Syncer(dex, source).run_once()
     assert dex.clients["app"].name == "App"
     assert report.ok
+
+
+def test_warns_about_plain_http_endpoint(caplog):
+    SsmSource(
+        SsmConfig(
+            _env_file=None, ssm_path="/dex", ssm_endpoint_url="http://ssm.internal:5000"
+        )
+    )
+    assert "plain http" in caplog.text

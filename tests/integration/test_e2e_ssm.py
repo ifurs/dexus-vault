@@ -157,3 +157,36 @@ def test_cli_requires_ssm_path(env, monkeypatch, tmp_path):
     )
     assert result.returncode == 2
     assert "SSM_PATH" in result.stderr
+
+
+def test_cli_once_with_irsa_web_identity(ssm, dex, env, prefix, monkeypatch, tmp_path):
+    # what the EKS pod identity webhook injects for IRSA; moto serves STS
+    for name in ("AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"):
+        monkeypatch.delenv(name)
+    token = tmp_path / "token"
+    token.write_text(
+        "eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJzeXN0ZW06c2VydmljZWFjY291bnQifQ.c2ln"
+    )
+    monkeypatch.setenv("AWS_ROLE_ARN", "arn:aws:iam::123456789012:role/dexus-vault")
+    monkeypatch.setenv("AWS_WEB_IDENTITY_TOKEN_FILE", str(token))
+    monkeypatch.setenv("AWS_ENDPOINT_URL_STS", SSM_ENDPOINT)
+    monkeypatch.setenv("AWS_EC2_METADATA_DISABLED", "true")
+    monkeypatch.setenv("AWS_CONFIG_FILE", "/dev/null")
+    monkeypatch.setenv("AWS_SHARED_CREDENTIALS_FILE", "/dev/null")
+    ssm.put("irsa", {"id": f"{prefix}irsa", "secret": "s"})
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "dexus_vault",
+            "--once",
+            "--env-file",
+            str(tmp_path / "none"),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert dex.get_client(f"{prefix}irsa") is not None
