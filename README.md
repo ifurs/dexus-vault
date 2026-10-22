@@ -289,7 +289,7 @@ Health endpoints on the same port:
 ```yaml
 containers:
   - name: dexus-vault
-    image: ifurs/dexus-vault:0.4.0
+    image: ifurs/dexus-vault:0.4.1
     env:
       - { name: DEX_GRPC_URL, value: "dex.dex.svc:5557" }
       - { name: VAULT_ADDR, value: "https://vault.vault.svc:8200" }
@@ -329,7 +329,7 @@ metadata:
 serviceAccountName: dexus-vault
 containers:
   - name: dexus-vault
-    image: ifurs/dexus-vault:0.4.0
+    image: ifurs/dexus-vault:0.4.1
     env:
       - { name: SECRETS_BACKEND, value: "aws-ssm" }
       - { name: SSM_PATH, value: "/dex/clients" }
