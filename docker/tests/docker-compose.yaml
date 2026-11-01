@@ -5,7 +5,7 @@ name: dexus-vault-test
 
 services:
   dex:
-    image: dexidp/dex:v2.46.0
+    image: dexidp/dex:v2.46.1
     volumes:
       - ./conf/dex.config.docker.yaml:/etc/dex/config.docker.yaml:ro
     ports:
