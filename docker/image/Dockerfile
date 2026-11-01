@@ -3,7 +3,7 @@
 # Base images are pinned by digest (multi-arch index); Dependabot updates them.
 ARG PYTHON_IMAGE=python:3.13-slim@sha256:cf50a4f6ac4f026458b08d5222023d700ac806410dff5e9ca8728fa44f2b850f
 
-FROM ghcr.io/astral-sh/uv:0.13.4@sha256:9f130421e930bfbdc563c00740466603f8723158e90297d07957c2294640262b AS uv
+FROM ghcr.io/astral-sh/uv:0.13.6@sha256:af22a52f5eafef3d78e551599d405c02df61919d18028f0cea8eda93bc9986d0 AS uv
 
 FROM ${PYTHON_IMAGE} AS build
 COPY --from=uv /uv /bin/uv
