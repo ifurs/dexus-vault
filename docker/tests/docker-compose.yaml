@@ -17,7 +17,7 @@ services:
       retries: 30
 
   vault:
-    image: hashicorp/vault:2.2.0
+    image: hashicorp/vault:2.2.1
     environment:
       VAULT_DEV_ROOT_TOKEN_ID: root
       VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
